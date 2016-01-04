@@ -1,0 +1,704 @@
+<div id="index_view" class={{if app_state.currentUser "row main_columns" "row"}}>
+  {{#if app_state.currentUser}}
+    <div class="col col-sm-6 col-md-4">
+      <div class="wrapper" style="background: #fff;">
+      <h2>
+        {{#link-to 'user' app_state.currentUser.user_name class='hidden_link'}}
+          <img src={{app_state.currentUser.avatar_url_with_fallback}} style="height: 40px;"/>
+          {{app_state.currentUser.user_name}}
+        {{/link-to}}
+      </h2>
+      <div class="left_links list-group">
+        {{#if blank_slate}}
+          <a class="list-group-item" href="#" style="height: 80px;" {{action 'getting_started'}}>
+            <span class="glyphicon glyphicon-user"></span>
+            <strong>{{t "Welcome to CoughDrop!" key='welcome_to_coughdrop'}}</strong>
+            <div class="progress" style="margin-bottom: 0;">
+              <div class="progress-bar" role="progressbar" aria-valuenow={{blank_slate_percent}} aria-valuemin="0" aria-valuemax="100" style={{blank_slate_percent_style}}>
+                <span class="sr-only">{{t "%{pct}% Complete" key='percent_complete' key=blank_slate_percent}}</span>
+              </div>
+            </div>
+            {{t "Select here to finish setting up your account" key='on_your_way'}}
+          </a>
+        {{/if}}
+        {{#if app_state.feature_flags.subscriptions}}
+          {{#if app_state.currentUser.expired_or_grace_period}}
+            {{#link-to 'user.subscription' app_state.currentUser.user_name class="list-group-item"}}
+              <span class={{if app_state.currentUser.expired "glyphicon glyphicon-info-sign expired" "glyphicon glyphicon-info-sign"}}></span>
+              {{#if app_state.currentUser.expired}}
+                <strong class='text-danger'>{{t "Tap here to update your subscription" key='subscribe'}}</strong><br/>
+                {{t "your free preview has ended" key='preview_expired'}} 
+              {{else}}
+                <strong>{{t "Please subscribe" key='subscribe'}}</strong><br/>
+                {{t "your free preview ends" key='preview_expires'}} {{date app_state.currentUser.subscription.expires 'day'}}
+              {{/if}}
+            {{/link-to}}
+          {{/if}}
+        {{/if}}
+        {{#if app_state.currentUser.supporter_role}}
+          <span class="list-group-item" style="height: auto; overflow: visible;">
+            <span class="glyphicon glyphicon-user"></span>
+            <span style="display: inline-block; width: 200px; width: calc(100% - 60px);">
+              {{t "supervisees:" key='supervisees_colon'}}<br/>
+              <ul class="list-unstyled" style="margin-bottom: 0;">
+              {{#if app_state.currentUser.supervisees}}
+                {{#each app_state.currentUser.supervisees as |supervisee|}}
+                  <li style="margin: 5px 0; font-size: 20px;">
+                    <div class="btn-group btn-group-lg supervisee_nav">
+                      {{#link-to 'user' supervisee.user_name class='btn btn-default'}}
+                        <img src={{supervisee.avatar_url}} style="height: 30px; width: 30px; margin: -5px 5px -5px -5px;"/>
+                        {{supervisee.user_name}}
+                      {{#if supervisee.unread_messages}}
+                        <span style="position: absolute; top: 10px; right: 10px;">
+                          <span class="label label-danger" title="unread messages">{{supervisee.unread_messages}}</span>
+                        </span>
+                      {{/if}}
+                      {{/link-to}}
+                      <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">{{t "Toggle Dropdown" key='toggle_dropdown'}}</span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu" style="width: 100%;">
+                        <li><a href="#" {{action 'homeInSpeakMode' supervisee.id true}}>{{t "Speak Mode (as me)" key='speak_mode_as_me'}}</a></li>
+                        <li><a href="#" {{action 'homeInSpeakMode' supervisee.id}}>{{t "Speak Mode (as %{user_name})" key='speak_mode_as_user' user_name=supervisee.user_name}}</a></li>
+                        <li>{{#link-to 'user.stats' supervisee.user_name}}{{t "Reports" key='reports'}}{{/link-to}}</li>
+                        <li>{{#link-to 'user.logs' supervisee.user_name (query-params type='all')}}{{t "Logs" key='logs'}}{{/link-to}}</li>
+                        <li><a href="#" {{action 'record_note' supervisee}}>{{t "New Note" key='new_note'}}</a></li>
+                        {{#if app_state.feature_flags.assessments}}
+                          <li><a href="#" {{action 'quick_assessment' supervisee}}>{{t "Quick Assessment" key='quick_assessment'}}</a></li>
+                        {{/if}}
+                      </ul>
+                    </div>
+                  </li>
+                {{/each}}
+              {{else}}
+                <li>
+                  {{t "None found" key='none_found'}}
+                </li>
+              {{/if}}
+              </ul>
+            </span>
+          </span>
+        {{/if}}
+        {{#if app_state.currentUser.preferences.home_board.key}}
+          {{#if app_state.currentUser.supporter_role}}
+            {{#link-to 'board' app_state.currentUser.preferences.home_board.key class="list-group-item half_size"}}
+              <span class="glyphicon glyphicon-home"></span>
+              {{t "home board:" key='home_board'}}
+              <strong>{{app_state.currentUser.preferences.home_board.key}}</strong>
+            {{/link-to}}
+            {{#if sync_able}}
+              <a href="#" class={{small_needs_sync_class}} {{action "sync"}}>
+                <span>
+                <span class={{refreshing_class}}></span>
+                {{#if persistence.sync_succeeded}}
+                  {{t "Sync Done!" key='sync_done'}}
+                {{else}}
+                  {{#if persistence.sync_failed}}
+                    {{t "Sync Failed" key='sync_failed'}}
+                    {{#if persistence.sync_status_error}}
+                      <span title={{persistence.sync_status_error}}>{{persistence.sync_status_error}}</span>
+                    {{/if}}
+                  {{else}}
+                    {{#if persistence.syncing}}
+                      {{t "Syncing..." key='syncing'}}
+                      {{#if persistence.sync_progress}}
+                        {{persistence.sync_progress.visited}} / 
+                        {{t "board" key='communication_set_board' count=persistence.sync_progress.total}}
+                      {{/if}}
+                    {{else}}
+                      {{#if needs_sync}}
+                        {{t "Sync before going offline!" key='needs_update'}}
+                      {{else}}
+                        {{t "Synced and ready for offline" key='up_to_date'}}
+                      {{/if}}
+                    {{/if}}
+                  {{/if}}
+                {{/if}}
+                </span>
+              </a>
+            {{/if}}
+          {{else}}
+            {{#link-to 'board' app_state.currentUser.preferences.home_board.key class="list-group-item"}}
+              <span class="glyphicon glyphicon-home"></span>
+              {{t "current home board:" key='current_home_board'}}<br/>
+              <strong>{{app_state.currentUser.preferences.home_board.key}}</strong>
+            {{/link-to}}
+            <a class="list-group-item" style="height: 85px;">
+              <span class="glyphicon glyphicon-volume-up"></span>
+              <span class="btn btn-primary" {{action "homeInSpeakMode"}} style="padding-top: 13px; padding-bottom: 13px; margin-top: -5px;">
+              {{t "Open In Speak Mode" key='open_in_speak_mode'}}
+              </span>
+              <div style="margin: 5px 0 5px 60px;">
+                <label style="font-weight: normal;">
+                  {{input type="checkbox" checked=app_state.currentUser.preferences.auto_open_speak_mode}}
+                  {{t "start app in Speak Mode" key='auto_open_speak_mode'}}
+                </label>
+              </div>
+            </a>
+            {{#if sync_able}}
+              <a href="#" class={{needs_sync_class}} {{action "sync"}}>
+                <span>
+                <span class={{refreshing_class}}></span>
+                {{#if persistence.sync_succeeded}}
+                  {{t "Sync Done!" key='sync_done'}}
+                {{else}}
+                  {{#if persistence.sync_failed}}
+                    {{t "Sync Failed" key='sync_failed'}}
+                  {{else}}
+                    {{#if persistence.syncing}}
+                      {{t "Syncing..." key='syncing'}}
+                    {{else}}
+                      {{#if needs_sync}}
+                        {{t "Sync before going offline!" key='needs_update'}}
+                      {{else}}
+                        {{t "Synced and ready for offline" key='up_to_date'}}
+                      {{/if}}
+                    {{/if}}
+                  {{/if}}
+                {{/if}}
+                {{#if app_state.currentUser.stats.board_set}}
+                  <br/>
+                  {{#if persistence.sync_progress}}
+                    {{persistence.sync_progress.visited}} / 
+                    {{t "board" key='communication_set_board' count=persistence.sync_progress.total}}
+                  {{else if persistence.sync_status_error}}
+                    {{persistence.sync_status_error}}
+                  {{else}}
+                    {{t "board" key='communication_set_board' count=app_state.currentUser.stats.board_set}}
+                  {{/if}}
+                {{/if}}
+                </span>
+              </a>
+            {{/if}}
+          {{/if}}
+        {{else}}
+          {{#link-to 'home-boards' class="list-group-item"}}
+            <span class="glyphicon glyphicon-home"></span>
+            <strong>{{t "You haven't set a home board yet" key='choose_home_board'}}</strong><br/>
+            {{t "Let us help you choose one." key='let_us_help_choose_home'}}
+          {{/link-to}}
+        {{/if}}
+      
+        <a href="#" class="list-group-item half_size subtle" {{action "newBoard"}}>
+          <span>
+          <span class="glyphicon glyphicon-plus"></span>
+          {{t "Create a New Board" key='create_a_new_board'}}
+          </span>
+        </a>
+        {{#if app_state.currentUser.has_management_responsibility}}
+          {{#link-to 'admin' class="list-group-item half_size"}}
+            <span class="glyphicon glyphicon-paperclip"></span>
+            {{t "Organization Management" key='org_management'}}<br/>
+          {{/link-to}}
+        {{/if}}
+      
+      </div>
+      <div style="float: right;">
+        <a href="#" {{action 'reload'}}>{{t "reload" key='reload'}}</a>
+      </div>
+      {{#if app_state.currentUser}}
+        {{t "Logging is " key='logging_is'}}
+        <a href="#" {{action "load_reports"}}>
+          {{#if app_state.currentUser.preferences.logging}}
+            {{#if app_state.currentUser.preferences.geo_logging}}
+              {{t "fully enabled" key='fully_enabled'}}
+            {{else}}
+              {{t "enabled (without geo-tracking) is enabled" key='logging_without_geo_is_enabled'}}
+            {{/if}}
+          {{else}}
+            {{t "disabled" key='logging_is_disabled'}}
+          {{/if}}
+        </a>
+      {{/if}}
+      <div style="clear: right;"></div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-4 col faded_back" style="margin-bottom: 20px;">
+      <div class="wrapper middle_column">
+        {{#if device.needs_install_reminder}}
+          <div style="margin-bottom: 20px; text-align: center;">
+            <h2>
+              <span class="glyphicon glyphicon-phone"></span>
+              {{t "Try the App" key='use_cough_drop_app'}}
+            </h2>
+            {{#if device.android}}
+              {{t "In Chrome, click Settings -> Add to Homescreen to add CoughDrop as an app on this device" key='cough_drop_app_android'}}
+            {{else}}
+              {{#if device.ios}}
+                {{t "Click Share (<img src='http://i.stack.imgur.com/6Yn8V.png' style='height: 20px;'/>) -> Add to Home Screen to add CoughDrop as an app on this device" key='cough_drop_app_ios'}}
+              {{else}}
+                {{t "CoughDrop will install on phones and tablets, just not through an app store. Go to mycoughdrop.com on your device and log in for instructions." key='cough_drop_app_other'}}
+              {{/if}}
+            {{/if}}
+          </div>
+        {{else if needs_sync}}
+          <div style="margin-bottom: 20px; text-align: center;">
+            <h2>
+              <span class="glyphicon glyphicon-refresh"></span>
+              {{t "CoughDrop works Offline!" key='coughdrop_works_offline'}}
+            </h2>
+            {{#if blank_slate}}
+              {{t "Once you're done with the setup checklist and have a home board set, you'll see a \"Sync\" button you can hit to save all your boards locally for offline use!" key='you_will_have_sync_for_offline'}}
+            {{else}}
+              {{t "Remember, you don't need a constant Internet connection to use CoughDrop. Just hit the \"Sync\" button when you're online and all your boards will be saved locally for offline use!" key='you_can_sync_for_offline'}}
+            {{/if}}
+          </div>
+        {{/if}}
+        <h4>{{t "Notifications" key='messages'}}</h4>
+        <div style="margin-left: 20px;">
+          {{#if app_state.currentUser.subscription.org_pending}}
+            <p>
+              {{#link-to 'user' app_state.currentUser.user_name}}{{t "%{org} wants to sponsor this user as part of their organization." key='remind_pending_org' org=app_state.currentUser.subscription.managing_org_name}}{{/link-to}}
+            </p>
+          {{/if}}
+          {{#if app_state.currentUser.unread_messages}}
+            <p>
+            {{#link-to 'user.logs' app_state.currentUser.user_name (query-params type='note')}}
+              {{t "You have " key='you_have'}}
+              {{t "unread message" count=app_state.currentUser.unread_messages key='unread_message_count'}}
+            {{/link-to}}
+            </p>
+          {{/if}}
+          {{#if app_state.currentUser.parsed_notifications}}
+            {{#each app_state.currentUser.parsed_notifications as |notif|}}
+              {{partial "user_notification"}}
+            {{/each}}
+          {{/if}}
+          {{#unless app_state.currentUser.unread_messages}}
+            {{#unless app_state.currentUser.parsed_notifications}}
+              {{#if show_notifications_explanation}}
+                <em style="font-size: 11px;">{{t "Notifications are alerts sent from other CoughDrop users. Users can send messages to everyone on a communicator's team and they'll appear here for quick review." key='notification_explanation'}}</em>
+              {{else}}
+                {{t "You have no new messages" key='no_new_messages'}}
+                <a href="#" {{action 'show_explanation' 'notifications'}}>
+                  <span class='glyphicon glyphicon-info-sign'></span>
+                </a>
+              {{/if}}
+            {{/unless}}
+          {{/unless}}
+        </div>
+        
+        {{#if app_state.currentUser.supporter_role}}
+          <h4>{{t "Recent Sessions for supervisees" key='recent_sessions_for_supervisees'}}</h4>
+        {{else}}
+          <h4>{{t "Recent Sessions" key='recent_sessions'}}</h4>
+        {{/if}}
+        <div style="margin-left: 20px;">
+          {{#if logs.loading}}
+            <p>{{t "Loading..." key='loading'}}</p>
+          {{else if logs.error}}
+            <p>{{t "Failed to load" key='failed_to_load'}}</p>
+          {{else if logs}}
+            {{#each logs as |log|}}
+              <p>
+                <span title="{{unbound date log.started_at}}">
+                  {{date_ago log.started_at}}
+                </span>
+                {{#link-to 'user.log' log.user.user_name log.id}}
+                  {{t "button" count=log.button_count key='button_count'}}
+                {{/link-to}}
+                {{#if app_state.currentUser.supporter_role}}
+                  <span> - 
+                    {{#link-to 'user' log.user.user_name}}
+                      {{log.user.user_name}}
+                    {{/link-to}}
+                  </span>
+                {{/if}}
+                <br/>
+                <span style="color: #888; font-size: 10px; white-space: nowrap; overflow: hidden; display: block;">{{log.summary}}</span>
+              </p>
+            {{/each}}
+          {{else}}
+            {{#if show_sessions_explanation}}
+              <p><em style="font-size: 11px;">{{t "When logging is enabled in your account preferences, your most recent sessions will appear here for quick review. If you are in the supervisor view you will instead see sessions for users you supervise." key='sessions_explanation'}}</em></p>
+            {{else}}
+              <p>
+                {{t "No sessions currently available" key='no_sessions_found'}}
+                <a href="#" {{action 'show_explanation' 'sessions'}}>
+                  <span class='glyphicon glyphicon-info-sign'></span>
+                </a>
+              </p>
+            {{/if}}
+          {{/if}}
+        </div>
+          
+      </div>
+    </div>
+    <div class="col-sm-6 col-sm-offset-6 col-md-4 col-md-offset-0 col">
+      <div style="padding: 0 10px;">
+      {{#if showOffline}}
+        <h2>{{t "Recent boards" key="available_boards"}}</h2>
+        <div class="row">
+          {{#if recentOfflineBoards}}
+            {{#each recentOfflineBoards as |board|}}
+              {{#if board.key}}
+                <div class="col-xs-4">
+                  {{partial "board-icon"}}
+                </div>
+              {{/if}}
+            {{/each}}
+          {{else}}
+            <div class="col-sm-4">
+              {{t "None found" key='none_found'}}
+            </div>
+          {{/if}}
+        </div>
+      {{else}}
+        <h2>{{t "Browse Boards" key='browse_boards'}}</h2>
+        <ul id="index_boards_toggle" class="nav nav-pills" style="margin-top: -5px; margin-bottom: 5px; margin-right: -20px;">
+          <li role="presentation" class={{if popular_selected 'active'}}><a href="#" {{action 'set_selected' 'popular'}}>{{t "Popular" key='popular'}}</a></li>
+          <li role="presentation" class={{if personal_selected 'active'}}><a href="#" {{action 'set_selected' 'personal'}}>{{t "Mine" key='mine'}}</a></li>
+          <li role="presentation" class={{if suggested_selected 'active'}}><a href="#" {{action 'set_selected' 'suggested'}}>{{t "Suggested" key='suggested'}}</a></li>
+          <li role="presentation" class={{if recent_selected 'active'}}><a href="#" {{action 'set_selected' 'recent'}}>{{t "Recent" key='recent'}}</a></li>
+        </ul>
+        {{#if popular_selected}}
+          <div class="row">
+            {{#if popularBoards.loading}}
+              <div class="col-sm-4">
+                {{t "Loading..." key='loading'}}
+              </div>
+            {{else if popularBoards.error}}
+              <div class="col-sm-4">
+                {{t "Failed to load" key='failed_to_load'}}
+              </div>
+            {{else if popularBoards}}
+              {{#each popularBoards as |board|}}
+                {{#if board.key}}
+                  <div class="col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+            {{else}}
+              <div class="col-sm-4">
+                {{t "None found" key='none_found'}}
+              </div>
+            {{/if}}
+          </div>
+        {{else if personal_selected}}
+          <div class="row">
+            {{#if personalBoards.loading}}
+              <div class="col-sm-4">
+                {{t "Loading..." key='loading'}}
+              </div>
+            {{else if personalBoards.error}}
+              <div class="col-sm-4">
+                {{t "Failed to load" key='failed_to_load'}}
+              </div>
+            {{else if personalBoards}}
+              {{#each personalBoards as |board|}}
+                {{#if board.key}}
+                  <div class="col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+              <div class='col-xs-12'>
+                {{#link-to 'user' app_state.currentUser.user_name}}
+                  {{t "see all my boards" key='see_all_my_boards'}}
+                {{/link-to}}
+              </div>
+            {{else}}
+              <div class="col-sm-4">
+                {{t "None found" key='none_found'}}
+              </div>
+            {{/if}}
+          </div>
+        {{else if suggested_selected}}
+          <div class="row">
+            {{#unless app_state.currentUser.supporter_role}}
+              <div class="col-xs-12" style="margin-bottom: 10px;">
+                {{#link-to "home-boards"}}
+                  <span>
+                  <span class="glyphicon glyphicon-search"></span>
+                  {{t "Help Me Choose a Home Board" key='help_me_choose_a_home_board'}}
+                  </span>
+                {{/link-to}}
+              </div>
+            {{/unless}}
+            {{#if homeBoards.loading}}
+              <div class="col-sm-4">
+                {{t "Loading..." key='loading'}}
+              </div>
+            {{else if homeBoards.error}}
+              <div class="col-sm-4">
+                {{t "Failed to load" key='failed_to_load'}}
+              </div>
+            {{else if homeBoards}}
+              {{#each homeBoards as |board|}}
+                {{#if board.key}}
+                  <div class="col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+            {{else}}
+              <div class="col-sm-4">
+                {{t "None found" key='none_found'}}
+              </div>
+            {{/if}}
+          </div>
+        {{else if recent_selected}}
+          <div class="row">
+            {{#if recentOfflineBoards}}
+              {{#each recentOfflineBoards as |board|}}
+                {{#if board.key}}
+                  <div class="col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+            {{else}}
+              <div class="col-sm-4">
+                {{t "None found" key='none_found'}}
+              </div>
+            {{/if}}
+          </div>
+        {{/if}}
+      {{/if}}
+      </div>
+    </div>
+  {{else}}
+    <div id="intro_header" class="col-sm-12 full_back" style="position: relative; color: #fff; text-align: center; padding: 170px 10px 200px; line-height: 30px;">
+      <div style="margin-bottom: 30px;">
+        <img src="{{path "images/logo-big.png"}}" style="width: 100px;"/>
+      </div>
+      <h2>Simple, insightful technology that empowers
+      <span id="header_line_2">individuals in making their voices heard</span>
+      </h2>
+      <div style="position: absolute; bottom: 30px; text-align: center; color: #fff; width: 100%; font-size: 30px; opacity: 0.7;">
+        <span class="glyphicon glyphicon-chevron-down"></span>
+      </div>
+    </div>
+    <div class="col-sm-12 full_back" style="background: #fff; padding: 50px 10px; margin-bottom: 10px; border-top: 30px solid #49c7e8;">
+      <div class="col-sm-5 col-sm-offset-1">
+        <h2 style="font-size: 30px;">
+          {{t "Every voice should be heard" key='every_voice_should_be_heard'}}
+        </h2>
+        <div style="line-height: 28px; font-size: 18px;">
+        <p>{{t "Some people are hard to hear -- through no fault of their own. Disabilities like autism, cerebral palsy, Down syndrome, Angelman syndrome and Rett syndrome make it harder for many individuals to communicate on their own. Many people use Augmentative and Alternative Communication (AAC) tools in order to help make their voices heard." key='coughdrop_lets_you'}}</p>
+        <br/>
+        <p>{{t "We work to help bring out the voices of those with complex communication needs through good tech that actually makes things easier and supports everyone in helping the individual succeed." key='coughdrop_lets_you_2'}}</p>
+        </div>
+        
+        {{#link-to "about"}}{{t "Learn More" key='learn_more'}}{{/link-to}}
+      </div>
+      <div class="col-sm-5">
+        <img src="{{path 'images/preview.png'}}" style="width: 100%; margin-top: 40px;"/>
+      </div>
+    </div>
+    <div class="col-sm-12 full_back" style="background: #eee; padding: 40px 10px 60px; border-top: 30px solid #f2b367;">
+      <div class="col-sm-12" style="text-align: center; margin-bottom: 30px;">
+        <h2>with <span style="font-weight: 200;">COUGHDROP</span> you can:</h2>
+      </div>
+      <div class="col-sm-4 icon_column">
+        <span class="glyphicon glyphicon-comment big_icon" style="color: #49c7e8;"></span> 
+        <span class="icon_under">
+        <strong>{{t "Personalize" key='personalize'}}</strong> 
+        {{t "communication and access across multiple devices. Grow your vocabulary over time with a simple interface backed up by lots of help and training." key='personalize_text'}}
+        </span>
+      </div>
+      <div class="col-sm-4 icon_column">
+        <span class="glyphicon glyphicon-cloud big_icon" style="color: #f2b367;"></span>
+        <span class="icon_under">
+        <strong>{{t "Work offline" key='work_offline'}}</strong> 
+        {{t "with backup in the cloud so it's painless to switch devices if something breaks. You can also share boards with others and open-license them for anyone to use." key='offline_text'}}
+        </span>
+      </div>
+      <div class="col-sm-4 icon_column">
+        <span class="glyphicon glyphicon-signal big_icon" style="color: #e86060;"></span> 
+        <span class="icon_under">
+        <strong>{{t "Empower the team" key='empower_the_team'}}</strong> 
+        {{t "with reports that help everyone improve. Teams can collaborate and modify boards for each individual without having to take their device away." key='insights_text'}}
+        </span>
+      </div>
+    </div>
+    {{#unless app_state.no_linky}}
+      <div class="col-sm-12 full_back" style="background: #fff; padding: 40px 10px 60px; border-top: 30px solid #49c7e8;">
+        <div class="col-sm-12" style="text-align: center;">
+          <h2>Get the Whole Team Involved</h2>
+        </div>
+        <div class=" col-sm-5 col-md-4 col-lg-4 col-lg-offset-1">
+          <div style="width: 100%; padding-bottom: 43%; position: relative;">
+            <div class="reveal reveal_1" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url(images/stats.png) no-repeat 0 0; background-size: cover;"></div>
+            <div class="reveal reveal_2" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url(images/stats.png) no-repeat 0 33%; background-size: cover;"></div>
+            <div class="reveal reveal_3" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url(images/stats.png) no-repeat 0 66%; background-size: cover;"></div>
+            <div class="reveal reveal_4" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url(images/stats.png) no-repeat 0 100%; background-size: cover;"></div>
+          </div>
+        </div>
+        <div class="col-sm-7 col-md-8 col-lg-6" style="margin-bottom: 20px;">
+          <p style="font-size: 17px;">
+            CoughDrop is priced per-communicator, so parents, therapists, and teachers can all sign up for free and use the powerful reporting and communication features on their own devices without breaking the bank.
+          </p><p style="font-size: 17px;">
+            Plus there's a free, full-featured <strong><span style="white-space: nowrap;">2-month</span> evaluation period</strong> to make sure everything's working well. After that, you can choose the subscription option that works best for you:
+          </p>
+        </div>
+        <div style="clear: left;"></div>
+        <div class=" col-lg-6 col-lg-offset-3 col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1" style="margin-top: 30px;">
+          <div class="row">
+            <div class="col-sm-4 col-sm-offset-1" style="text-align: center;">
+              <div style="font-size: 50px;">monthly</div>
+              <div style="margin-top: -10px;">
+                <span style="font-size: 15px; vertical-align: middle;">$</span><span style="font-size: 25px; vertical-align: middle;">6</span>
+                <span class="text-muted" style="margin-top: -10px;">per month</span>
+              </div>
+            </div>
+            <div class="col-sm-2 text-muted" style="font-size: 30px; padding-top: 15px; text-align: center;">
+              - or -
+            </div>
+            <div class="col-sm-4" style="text-align: center;">
+              <div style="font-size: 50px; white-space: nowrap;">long-term</div>
+              <div style="margin-top: -10px;">
+                <span style="font-size: 15px; vertical-align: middle;">$</span><span style="font-size: 25px; vertical-align: middle;">200</span>
+                <span class="text-muted" style="margin-top: -10px;">for 5 years</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-8 col-sm-offset-2" style="text-align: center; margin-bottom: 20px;">
+          {{#link-to 'pricing'}}{{t "see our pricing details." key='whats_it_cost'}}{{/link-to}}
+        </div>
+      </div>
+    {{/unless}}
+    {{#if app_state.no_linky}}
+      <div class="col-sm-12 full_back" style="padding: 20px 10px; background: #fafafa; border-top: 30px solid #49c7e8; border-bottom: 30px solid #e86060;">
+        <div style="text-align: center; margin-top: 50px; margin-bottom: 40px;">
+          <h2>{{#link-to "login"}}{{t "Back to Login" key='back_to_login'}}{{/link-to}}</h2>
+        </div>
+      </div>
+    {{else}}
+      <div class="col-sm-12 full_back" style="padding: 40px 10px 40px; background-image: url(/images/bg.jpg); background-repeat: no-repeat; background-position: center bottom; background-size: cover; border-top: 30px solid #e86060;">
+        <div class="col-md-4 col-md-offset-4 col-sm-6 col-sm-offset-3">
+        <div class="well with_bg">
+        <div class="row">
+          <div>
+            <h2>{{t "Try <span style='font-weight: 200;'>COUGHDROP</span> for yourself" key='join_coughdrop'}}</h2>
+            <p>
+              {{t "Ready to see more? Sign up now to get started!" key='sign_up_for_free'}}
+            </p>
+          </div>
+          {{#if stashes.enabled}}
+            <form class="col-sm-12 form-horizontal" {{action "saveProfile" on="submit"}}>
+              <div class="form-group">
+                {{input value=user.name class="form-control" id="name" title="Full Name" placeholder="Full Name"}}
+              </div>
+              <div class="form-group">
+                {{input value=user.user_name class="form-control" id="user_name" title="user name" placeholder="User name (optional, we can pick for you)"}}
+                {{#if user.user_name_check.checking}}
+                {{else if user.user_name_check.exists}}
+                  {{t '"%{user_name}" already exists' user_name=user.user_name}}
+                {{else if noName}}
+                  {{t "name or username is required" key='name_or_username_required'}}
+                {{/if}}
+              </div>
+              <div class="form-group">
+                {{input value=user.email class="form-control" id="email" title="Email" placeholder="Email"}}
+                {{#if badEmail}}
+                  {{t "email required" key='email_required'}}
+                {{/if}}
+              </div>
+              <div class="form-group">
+                {{input type="password" value=user.password class="form-control" id="password" title="password" placeholder="Password"}}
+                {{#if shortPassword}}
+                  {{t "password must be at least 6 characters" key='min_password'}}<br/>
+                {{/if}}
+              </div>
+              <div class="form-group">
+                {{bound-select select_class="form-control" select_id="registration_type" content=registration_types selection=user.preferences.registration_type action=(action (mut user.preferences.registration_type)) }}
+              </div>
+              <div class="form-group">
+                <p><label style="font-weight: normal;">
+                  {{input type="checkbox" checked=user.terms_agree}}
+                  By registering or using the product, you are agreeing that you have read and understood the <a href="/terms">Terms of Use and License Agreement</a>, and are capable of binding to a legal contract.
+                </label></p>
+                <button type="submit" class="btn btn-primary" style="width: 100px;">{{t "Sign Up" key='sign_up'}}</button>
+                <a href="#" {{action "authenticateSession"}} class="text" style="padding-left: 10px;">{{t "Already Registered?" key="already_registered"}}</a>
+              </div>    
+            </form>
+          {{else}}
+            {{partial "bad-privacy-settings"}}
+          {{/if}}
+        </div>
+        </div>
+        </div>
+      </div>
+      <div class="col-sm-12 full_back" style="padding: 20px 10px; background: #fafafa; border-top: 30px solid #49c7e8; border-bottom: 30px solid #e86060;">
+        <div style="text-align: center; margin-bottom: -10px;">
+          <h2>{{t "...or check out some publicly-shared boards" key='see_exmaples'}}</h2>
+        </div>
+        <div class="col-sm-4 col-sm-offset-1" style="text-align: center;">
+          <h3 style="font-size: 20px;">{{t "Popular boards" key="popular_boards"}}</h3>
+          <div class="row">
+            {{#if popularBoards.loading}}
+              <div class="col-sm-4">
+                {{t "Loading..." key='loading'}}
+              </div>
+            {{else if popularBoards.error}}
+              <div class="col-sm-4">
+                {{t "Failed to load" key='failed_to_load'}}
+              </div>
+            {{else if popularBoards}}
+              {{#each popularBoards as |board|}}
+                {{#if board.key}}
+                  <div class="col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+            {{else}}
+              <div class="col-xs-4">
+                {{#if loading_popular_boards}}
+                  {{t "Loading..." key='loading'}}
+                {{else}}
+                  {{t "None found" key='none_found'}}
+                {{/if}}
+              </div>
+            {{/if}}
+          </div>
+        </div>
+        <div class="col-sm-4 col-sm-offset-1" style="text-align: center;">
+          <h3 style="font-size: 20px;">Home boards</h3>
+          <div class="row">
+            {{#if homeBoards.loading}}
+              <div class="col-sm-4">
+                {{t "Loading..." key='loading'}}
+              </div>
+            {{else if homeBoards.error}}
+              <div class="col-sm-4">
+                {{t "Failed to load" key='failed_to_load'}}
+              </div>
+            {{else if homeBoards}}
+              {{#each homeBoards as |board|}}
+                {{#if board.key}}
+                  <div class="col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+            {{else}}
+              <div class="col-xs-4">
+                {{t "None found" key='none_found'}}
+              </div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+  {{/if}}
+</div>
+{{#if app_state.login_modal}}
+  <div id="login_overlay">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <img src={{path 'images/logo-big.png'}} style="width: 100px;"/>
+    </div>
+    {{#unless app_state.no_linky}}
+      <div class="row" style="margin-bottom: 10px;">
+        <div class="col-md-offset-4 col-md-4 col-sm-offset-3 col-sm-6">
+          <a href="#" {{action 'hide_login'}} class='btn btn-default' style="width: 100%;">{{t "New to CoughDrop? Find out more." key='learn_more'}}</a>
+        </div>
+      </div>
+    {{/unless}}
+    {{login-form set_overflow=true}}
+  </div>
+{{/if}}

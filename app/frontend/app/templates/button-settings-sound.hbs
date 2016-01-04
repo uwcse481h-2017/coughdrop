@@ -1,0 +1,84 @@
+<form class="form-horizontal" {{action "nothing" on='submit'}}>
+<div class={{if soundState 'active' 'hidden'}}>
+  <div class="form-group">
+    <label for="vocalization" class="col-sm-2 control-label">{{t "Speak" key='speak'}}</label>
+    <div class="col-sm-10 options">
+      <span class="vocalization_field">
+        {{input value=model.vocalization class="form-control inline" id="vocalization" placeholder=label}}
+      </span>
+      <button type="button" {{action "record_sound" on="click"}} disabled={{recorder_unavailable}} class="btn btn-default">
+        <img src="{{path 'images/microphone.svg'}}" style="height: 20px; margin: -15px -3px -13px -3px;" alt="record_a_sound"/>
+      </button>
+      <span class="file_select_holder">
+        <button type="button" class='btn btn-default'>
+          <img src="{{path 'images/upload.svg'}}" style="height: 30px; margin: -10px -6px -6px;" alt="upload"/>
+        </button>
+        <input type="file" name="sound_upload" id="sound_upload" accept="audio/*"/>
+      </span>
+    </div>
+  </div>
+  {{#if sound_preview}}
+    <div style="text-align: center;">
+      Selected sound{{#if sound_preview.name}} ({{sound_preview.name}}){{/if}}:<br/>
+      <audio controls src={{sound_preview.url}}></audio>
+    </div>
+    <div style="margin-top: 10px;">
+      {{pick-license license=sound_preview.license}}
+    </div>
+    <div style="margin-top: 10px;">
+      <button {{action "select_sound_preview"}} class='btn btn-primary'>{{t "Use This" key='use_this'}}</button>
+      {{#if sound_preview.from_recording}}
+        <button {{action "record_sound"}} class='btn btn-default'>
+          {{t "Try Again" key='try_again'}}
+        </button>
+      {{/if}}
+      <button {{action "clear_sound_work"}} class='btn btn-default'>{{t "Cancel" key='cancel'}}</button>
+    </div>
+  {{else}}
+    {{#if sound_recording.ready}}
+      <button id="recording_status" {{action "toggle_recording_sound"}} class={{if sound_recording.recording 'recording'}}>
+        <span class="sub_status">
+          <span>Start</span>
+        </span>
+      </button>
+      <canvas id="sound_levels" width="400" height="300" style="display: none;"></canvas>
+      <button {{action "toggle_recording_sound"}} class='btn btn-primary'>
+        {{#if sound_recording.recording}}
+          {{t "Stop" key='stop'}}
+        {{else}}
+          {{t "Start" key='start'}}
+        {{/if}}
+      </button>
+      <button class='btn btn-default' {{action "clear_sound_work"}}>{{t "Cancel" key='cancel'}}</button>
+    {{else}}
+      {{#if model.sound.url}}
+        <div style="margin-bottom: 10px; text-align: center;">
+          {{t "Played sound:" key='played_sound_colon'}}<br/>
+          <audio controls src={{model.sound.url}}></audio>
+        </div>      
+        {{pick-license license=model.sound.license}}
+        <br/>
+        <button class='btn btn-default' {{action "clear_sound"}}>{{t "Clear Sound" key='clear_sound'}}</button>
+      {{else}}
+        <div style="margin-bottom: 10px; text-align: center;">
+          {{#if modifier}}
+            <strong>{{modifier}}</strong> {{t "modifier via Text-To-Speech" key='modifying_via_tts'}}
+            <span class="modifier_example_field">
+              {{input value=modifier_text class="form-control" id="modifier" placeholder="enter a word to hear it modified"}}
+            </span>
+          {{else}}
+            {{#if model.vocalization}}
+              <strong>"{{model.vocalization}}"</strong> {{t "via Text-To-Speech" key='via_tts'}}
+            {{else}}
+              <strong>"{{model.label}}"</strong> {{t "via Text-To-Speech" key='via_tts'}}
+            {{/if}}
+          {{/if}}
+        </div>
+        <div style="text-align: center;">
+          <button type="button" {{action "testVocalization" this}} class="btn btn-default">{{t "Listen" key='listen'}}</button>
+        </div>
+      {{/if}}
+    {{/if}}
+  {{/if}}
+</div>
+</form>

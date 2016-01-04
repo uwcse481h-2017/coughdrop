@@ -1,0 +1,25 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>
+      {{t "Board Import" key='board_import'}}
+    </h3>
+  </div>
+  <div class="modal-body">
+    <p>
+      <img src="{{path 'images/spinner.gif'}}" style="float: left; padding-right: 15px;"/> 
+      {{#if model.errored}}
+        {{t "There was an error importing your boards. Please make sure you uploaded a valid file and try again." key='bad_board_import'}}
+      {{else}}
+        {{#if model.finished}}
+          {{t "Import finished! You should be directed to the new board..." key='import_board_finished'}}
+        {{else}}
+          {{t "Importing boards, this could take a few minutes..." key='importing_boards_please_wait'}}
+        {{/if}}
+      {{/if}}
+    </p>
+  </div>
+  <div class="modal-footer">
+    <a href="#" class="btn" {{action 'close'}}>{{t "Close" key='close'}}</a>
+  </div>
+{{/modal-dialog}}

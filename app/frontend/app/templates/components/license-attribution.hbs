@@ -1,0 +1,32 @@
+{{#if license.type}}
+  {{#if license.copyright_notice_url}}
+    {{#if private_license}}
+      <a href={{license.copyright_notice_url}}>{{t "All rights reserved" key='all_rights_reserved'}}</a>
+    {{else}}
+      <a href={{license.copyright_notice_url}}>{{license.type}}</a>
+    {{/if}}
+  {{else}}
+    {{#if private_license}}
+      {{t "All rights reserved" key='all_rights_reserved'}}
+    {{else}}
+      {{license.type}}
+    {{/if}}
+  {{/if}}
+  {{#if license.author_name}}
+    {{t " by " key='by'}} 
+    {{#if license.author_url}}
+      <a href={{license.author_url}}>{{license.author_name}}</a>
+    {{else}}
+      {{#if license.author_email}}
+        <a href="mailto:{{unbound license.author_email}}">{{license.author_name}}</a>
+      {{else}}
+        {{license.author_name}}
+      {{/if}}
+    {{/if}}
+  {{/if}}
+  {{#if license.source_url}}
+    (<a href={{license.source_url}}>{{t "source" key='source'}}</a>)
+  {{/if}}
+{{else}}
+  {{t "Unspecified, assume all rights reserved." key='unspecified_all_rights'}}
+{{/if}}

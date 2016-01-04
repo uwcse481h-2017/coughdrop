@@ -1,0 +1,82 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>{{t "Share Board" key='share_board'}}</h3>
+  </div>
+  <div class="modal-body">
+    {{#if board.public}}
+      <p>{{t "Copy the link to this board to share it on other apps/sites<br/><!--TODO: (for better sharing install the CoughDrop mobile app).-->" key='copy_board_link'}}</p>
+    
+      <div class="row" style="margin: 30px 0 0;">
+        <div class="col-sm-12">
+          <p class="form-control-static" style="line-height: 34px; vertical-align: middle;">
+            <img src={{board.icon_url_with_fallback}} style="height: 30px; padding-right: 5px;"/>
+            {{#if board.link}}
+              <a href={{board.link}} target="_blank">Link to {{board.name}} ({{board.key}}) <span class="glyphicon glyphicon-hand-up"></span></a>
+            {{/if}}
+          </p>
+          <div id="share_links" style="min-height: 40px; margin-left: -3px; margin-top: 15px;">
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    
+    {{#if board.permissions.share}}
+      <div style="margin: 20px 0;">
+        <h4>
+          {{t "Share with other users" key='share_with_others'}}
+        </h4>
+        {{#if board.shared_users}}
+          <table class="table table-hover">
+            {{#each board.shared_users as |user|}}
+              <tr>
+                <td style="width: 60px;">
+                  <img src={{user.avatar_url}} style="height: 50px; width: 50px;"/>
+                </td>
+                <td>
+                  <div style="font-size: 20px;">{{user.name}}</div>
+                  {{#link-to 'user' user.id}}{{user.user_name}}{{/link-to}}
+                  {{#if user.include_downstream}}
+                    <span class="text-muted"> {{t "(includes downstream boards)" key='downstream'}}</span>
+                  {{/if}}
+                  {{#if user.allow_editing}}
+                    <span class="text-muted"> {{t "(editing allowed)" key='editing_allowed'}}</span>
+                  {{/if}}
+                </td>
+                <td style="width: 30px; font-size: 20px; vertical-align: middle;">
+                  <a href='#' {{action "unshare" user.id}} class="glyphicon glyphicon-trash"><span class='text-hide'>delete</span></a>
+                </td>
+              </tr>
+            {{/each}}
+          </table>
+        {{/if}}
+        <form {{action 'share_with_user'  on='submit'}} class="form-inline">
+          <div class="row">
+            <div class="col-sm-5 col-xs-6" style="margin-top: 5px;">
+              {{input value=share_user_name class="form-control" placeholder="user name of user to add"}}
+            </div>
+            <div class="col-sm-6">
+              <div class="checkbox">
+                <label>
+                  {{input type="checkbox" checked=share_include_downstream}}
+                  {{t "also share any linked boards" key='include_downstream_boards'}}
+                </label>
+              </div>
+              <div class="checkbox">
+                <label>
+                  {{input type="checkbox" checked=share_allow_editing}}
+                  {{t "allow editing (and deleting) as well" key='include_downstream_boards'}}
+                </label>
+              </div>
+            </div>
+            <div class="col-sm-12">
+              <div style="margin-top: 5px;">
+                <button type="submit" class="btn btn-default">{{t "Share Board" key='share_board'}}</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    {{/if}}
+  </div>    
+{{/modal-dialog}}

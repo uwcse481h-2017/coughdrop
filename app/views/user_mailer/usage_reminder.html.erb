@@ -1,0 +1,66 @@
+Hello again, and thanks for joining CoughDrop! We wanted to take just
+a minute and make sure you knew about some of the powerful tools you have 
+access to with your CoughDrop account, so you can get the most out of
+your experience.<br/><br/>
+<% if @supporter_no_supervisees %>
+  <h3>Supervising</h3>
+  <img src="https://s3.amazonaws.com/coughdrop/email/supervisor.png" style="float: right; width: 300px; border: 1px solid #888; padding: 2px; margin-left: 10px; margin-right: 5px;" alt="supervisor screen shot"/>
+  It looks like you've signed up as a supervisor, but you don't have anybody to supervise.
+  Once you've been added by communicators as a supervisor, you'll see their information
+  show up on your dashboard, including notifications, recent logs, and quick actions for
+  things like loading their boards and reports, or even firing off a quick assessment! We're
+  always working to make things better, so keep an eye out for additional improvements here.
+  <span style="clear: left;"></span>
+  <br/><br/>
+<% elsif @no_recent_activity || @no_home_board %>
+  <h3>Getting Started</h3>
+  <img src="https://s3.amazonaws.com/coughdrop/email/board.png" style="float: right; width: 300px; border: 1px solid #888; padding: 2px; margin-left: 10px; margin-right: 5px;" alt="board screen shot"/>
+  If you haven't had much chance to use CoughDrop yet, remember that it's a
+  simple, flexible communication app that gives you unique insights into what's working.
+  It's easy to get started, just pick a home board, open it in Speak Mode and start
+  talking! You can always use one of the suggested starter boards, or create your own.
+  And don't forget that you can connect supervisors to a communicator's account, and 
+  then everyone can see the boards and reports on their own devices too!
+  <span style="clear: left;"></span>
+  <br/><br/>
+<% else %>
+  <h3>Doing More</h3>
+  <img src="https://s3.amazonaws.com/coughdrop/email/board.png" style="float: right; width: 300px; border: 1px solid #888; padding: 2px; margin-left: 10px; margin-right: 5px;" alt="board screen shot"/>
+  CoughDrop is more than just a communication app, it's a movement. We're trying to show
+  everyone just how much of a different flexible, team-enabled resources can be
+  in helping communicators make their voices heard. Your
+  support helps make that happen, so thank you for joining us. We're constantly working 
+  with experts to find ways to
+  improve the app to better support the many different communication strategies that are out
+  there. If you have any thoughts or suggestions, please don't hesitate to share!
+  <span style="clear: left;"></span>
+  <br/><br/>
+<% end %>
+
+<% if @logging_disabled %>
+  <h3>Logging</h3>
+  <img src="https://s3.amazonaws.com/coughdrop/email/reporting.png" style="float: left; width: 300px; border: 1px solid #888; padding: 2px; margin-right: 10px; margin-left: 5px;" alt="reporting screen shot"/>
+  CoughDrop has powerful reporting and logging built-in. Once you 
+  <a href="<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/stats">turn on logging</a> 
+  then any usage that happens will be automatically gathered into detailed
+  reports and summaries. The communicator and their support team can see things
+  like what time of day communication is happening, what types of speech are being
+  used and where on the screen buttons are being pressed, all with the goal of working
+  toward better communication strategies.
+  <span style="clear: left;"></span>
+  <br/><br/>
+<% end %>
+
+<% if @no_subscription %>
+  <h3>Subscription</h3>
+  If you like what you're seeing with CoughDrop, feel free to 
+  <a href="<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/subscription">update your subscription settings</a> 
+  to be able to keep using CoughDrop for the long-term!<br/><br/>
+<% end %>
+
+We hope this was a helpful check-in! If you have any questions or concerns, please let us know on
+<a href="https://coughdrop.zendesk.com">our support site</a> by submitting a request
+and we'll be happy to help you out.
+
+Thanks!
+-The CoughDrop Team

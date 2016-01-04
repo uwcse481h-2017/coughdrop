@@ -1,0 +1,56 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>
+      {{t "Quick Assessment" key='quick_assessment'}}
+    </h3>
+  </div>
+  <div class="modal-body">
+    <form class="row form-horizontal">
+      <div class="form-group">
+        <label for="description" class="col-sm-4 control-label">{{t "Assessment Type" key='assessment_type'}}</label>
+        <div class="col-sm-5">
+          {{input value=description class="form-control" id="description" placeholder="brief description"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="correct_tally" class="col-sm-4 control-label">{{t "Correct" key='correct'}}</label>
+        <div class="col-sm-2">
+          {{input value=totals.correct class="form-control input-lg" id="correct_tally" placeholder="0"}}
+        </div>
+        <div class="col-sm-3" style="padding-top: 5px;">
+          <span class="text-muted">{{t "oops?" key='oops'}}</span>
+          <button type="button" class="btn btn-default" {{action "plus_minus" "minus" "totals.correct"}} style="width: 35px;">-</button>
+          <button type="button" class="btn btn-default" {{action "plus_minus" "plus" "totals.correct"}} style="width: 35px;">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="incorrect_tally" class="col-sm-4 control-label">{{t "Incorrect" key='incorrect'}}</label>
+        <div class="col-sm-2">
+          {{input value=totals.incorrect class="form-control input-lg" id="incorrect_tally" placeholder="0"}}
+        </div>
+        <div class="col-sm-3" style="padding-top: 5px;">
+          <span class="text-muted">{{t "oops?" key='oops'}}</span>
+          <button type="button" class="btn btn-default" {{action "plus_minus" "minus" "totals.incorrect"}} style="width: 35px;">-</button>
+          <button type="button" class="btn btn-default" {{action "plus_minus" "plus" "totals.incorrect"}} style="width: 35px;">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-4" style="text-align: right; padding-right: 0;">
+          <button class="btn btn-success" {{action "correct"}} style="font-size: 50px; padding: 10px 50px;">
+            <span class="glyphicon glyphicon-ok"></span>
+          </button>
+        </div>
+        <div class="col-sm-4">
+          <button class="btn btn-danger" {{action "incorrect"}} style="font-size: 50px; padding: 10px 50px;">
+            <span class="glyphicon glyphicon-remove"></span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <a href="#" class="btn btn-primary btn-lg" {{action 'record_assessment'}}>{{t "Done" key='done'}}</a>
+    <a href="#" class="btn btn-default btn-lg" {{action 'close'}}>{{t "Cancel" key='cancel'}}</a>
+  </div>
+{{/modal-dialog}}

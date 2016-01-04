@@ -1,0 +1,94 @@
+<div class="row">
+  <div class="col-sm-12">
+    <form class="form-inline">
+      <div class="form-group">
+      {{input type="text" value=searchString enter="searchBoards" class="form-control" placeholder="Search Boards"}}
+      </div>
+      <div class="form-group">
+        <button class="btn btn-default" {{action "searchBoards"}}>{{t "Go" key='go'}}</button>
+      </div>
+      <div class="form-group" style="padding-left: 20px;">
+        {{#if app_state.currentUser}}
+          <button class="btn btn-default" {{action "newBoard"}}>{{t "Create a New Board" key='create_a_new_board'}}</button>
+        {{/if}}
+      </div>
+    </form>
+  </div>
+</div>
+<div class="row" style="margin-top: 15px;">
+  <div class={{if app_state.currentUser 'col-sm-8' 'col-sm-12'}}>
+    <h2>{{t "Online Results" key='online_results'}}</h2>
+    {{#if online_results}}
+      {{#if online_results.loading}}
+        <p>{{t "Loading..." key='loading'}}</p>
+      {{else if online_results.results}}
+        <div class="row">
+          {{#each online_results.results as |board|}}
+            {{#if board.key}}
+              <div class={{if app_state.currentUser 'col-md-3 col-sm-4 col-xs-4' 'col-sm-2 col-xs-4'}}>
+                {{partial "board-icon"}}
+              </div>
+            {{/if}}
+          {{/each}}
+        </div>
+      {{else}}
+        {{#if persistence.online}}
+          <p>{{t "None found" key='none_found'}}</p>
+        {{else}}
+          <p>{{t "Not online, connect to the Internet to see results" key='not_online_connect'}}</p>
+        {{/if}}
+      {{/if}}
+    {{/if}}
+  </div>
+  {{#if app_state.currentUser}}
+    <div class="col-sm-4">
+      {{#if persistence.online}}
+        <h2>{{t "My Boards" key='my_boards'}}</h2>
+        {{#if personal_results}}
+          {{#if personal_results.loading}}
+            <p>{{t "Loading..." key='loading'}}</p>
+          {{else if personal_results.results}}
+            <div class="row">
+              {{#each personal_results.results as |board|}}
+                {{#if board.key}}
+                  <div class="col-md-4 col-sm-6 col-xs-4">
+                    {{partial "board-icon"}}
+                  </div>
+                {{/if}}
+              {{/each}}
+            </div>
+            {{#link-to 'user.index' app_state.currentUser.user_name}}{{t "See all my boards" key='see_all_my_boards'}}{{/link-to}}
+          {{else}}
+            {{#if persistence.online}}
+              <p>{{t "None found" key='none_found'}}</p>
+              {{#link-to 'user.index' app_state.currentUser.user_name}}{{t "See all my boards" key='see_all_my_boards'}}{{/link-to}}
+            {{else}}
+              <p>{{t "Not online, connect to the Internet to see results" key='not_online_connect'}}</p>
+            {{/if}}
+          {{/if}}
+        {{/if}}
+      {{else}}
+        {{#unless local_results.impossible}}
+          <h2>{{t "Local Results" key='local_results'}}</h2>
+          {{#if local_results}}
+            {{#if local_results.loading}}
+              <p>{{t "Loading..." key='loading'}}</p>
+            {{else if local_results.results}}
+              <div class="row">
+                {{#each local_results.results as |board|}}
+                  {{#if board.key}}
+                    <div class="col-md-4 col-sm-6 col-xs-4">
+                      {{partial "board-icon"}}
+                    </div>
+                  {{/if}}
+                {{/each}}
+              </div>
+            {{else}}
+              <p>{{t "None found" key='none_found'}}</p>
+            {{/if}}
+          {{/if}}
+        {{/unless}}
+      {{/if}}
+    </div>
+  {{/if}}
+</div>

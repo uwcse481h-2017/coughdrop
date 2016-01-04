@@ -1,0 +1,81 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-body">
+    <form class="form-horizontal" {{action "saveProfile" on="submit"}}>
+      <div class="form-group">
+        <label for="name" class="col-sm-3 control-label">{{t "Name" key='name'}}</label>
+        <div class="col-sm-7">
+          {{input value=model.name class="form-control" id="name" placeholder="Board Name"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="decription" class="col-sm-3 control-label">{{t "Description" key='description'}}</label>
+        <div class="col-sm-7">
+          <!-- TODO: placeholder i18n magic for textarea too -->
+          {{textarea value=model.description class="form-control" id="decription" placeholder="Details about this board"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="image_url" class="col-sm-3 control-label">{{t "Icon" key='icon'}}</label>
+        <div class="col-sm-7">
+          {{input value=model.image_url class="form-control" id="image_url" placeholder="URL or pick from the list"}}
+          <div style="margin-top: 12px; float: left; height: 42px; width: 42px; border: 1px solid #ccc; overflow: hidden;">
+            {{#if model.image_url}}
+              <img src={{model.image_url}} {{action "pickImageUrl" model.image_url}} style="width: 40px; height: 40px;" alt="current image"/>
+            {{/if}}
+          </div>
+          <div class="icon_urls">
+            {{#each iconUrls as |icon|}}
+              <img src={{icon.url}} {{action "pickImageUrl" icon.url}} alt={{icon.alt}} />
+            {{/each}}
+          </div>
+          <div style="clear: left;"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="license" class="col-sm-3 control-label">{{t "License" key='license'}}</label>
+        <div class="col-sm-7">
+          {{bound-select select_class="form-control" select_id="license" content=licenseOptions selection=model.license.type action=(action (mut model.license.type)) }}
+        </div>
+      </div>
+      {{#if attributable_license_type}}
+        <div class="form-group">
+          <label for="author" class="col-sm-3 control-label">{{t "Author" key='author'}}</label>
+          <div class="col-sm-4">
+            {{input value=model.license.author_name class="form-control" id="author" placeholder="Name"}}
+          </div>
+          <div class="col-sm-5">
+            {{input value=model.license.author_url class="form-control" title="Author URL" placeholder="Author URL"}}
+          </div>
+        </div>
+      {{/if}}
+      <div class="form-group">
+        <label for="public" class="col-sm-3 control-label">{{t "Suggestions" key='word_suggestions'}}</label>
+        <div class="col-sm-9">
+          <div class="checkbox">
+            <label>
+              {{input type="checkbox" checked=model.word_suggestions}}
+              {{t "Show word completion suggestions" key='show_word_suggestions'}}
+            </label>
+          </div>
+          <em style="padding-left: 20px;">{{t "(helpful for keyboard-style boards)" key='helpful_for_keyboard_boards'}}</em>
+        </div>
+      </div>
+      <div class="form-group">
+        <fieldset>
+        <label for="public" class="col-sm-3 control-label">{{t "Public" key='public'}}</label>
+        <div class="col-sm-9">
+          <div class="checkbox">
+            <label>
+              {{input type="checkbox" checked=model.public id="public"}}
+              {{t "Anyone can see this board" key='anyone_can_see_board'}}
+            </label>
+          </div>
+        </div>
+        </fieldset>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <a href="#" class="btn" {{action 'close'}}>{{t "Close" key='close'}}</a>
+  </div>
+{{/modal-dialog}}

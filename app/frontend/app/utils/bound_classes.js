@@ -1,0 +1,112 @@
+import Ember from 'ember';
+import $ from 'jquery';
+
+var boundClasses = {};
+// TODO: need to periodically clear out CSS rule sheet or it will get big over time... maybe on new board view?
+(function() {
+  var styleElement = null;
+
+  $.extend(boundClasses, {
+    setup: function(reset) {
+      if(!styleElement || reset) {
+        this.classes = {
+          '__': true
+        };
+        create_sheet();
+      }
+    },
+    clear: function() {
+      styleElement = null;
+      this.classes = null;
+    },
+    keyify: function(button) {
+      if(!button) { throw "need button"; }
+      return ('b_' + (button.border_color || '') + '__' + (button.background_color || '')).replace(/[^a-zA-Z0-9]/g, '_');
+    },
+    add_rules: function(buttons) {
+      if(!buttons) { return; }
+      for(var idx = 0; idx < buttons.length; idx++) {
+        var button = buttons[idx];
+        boundClasses.add_rule(button);
+      }
+    },
+    add_rule: function(button) {
+      if(!button) { throw "need button"; }
+      if(!this.classes || !styleElement) { console.log("must call setup before using bound_classes"); return false; }
+      var key = this.keyify(button);
+      if(!this.classes[key]) {
+        var str = '';
+        var hoverStr = '';
+        if(button.border_color) {
+          // TODO: compute and store hover colors, mark them as "server-side approved"
+          // and use them without tinycolor if approved
+          var border = window.tinycolor(button.border_color || '#eee');
+          str = str + 'border-color: ' + border.toRgbString() + ';';
+          hoverStr = hoverStr + 'border-color: ' + window.tinycolor(border.toRgb()).darken(5).toRgbString() + ';';
+        }
+        if(button.background_color) {
+          var fill = window.tinycolor(button.background_color || '#fff');
+          str = str + 'background-color: ' + fill.toRgbString() + ';';
+          hoverStr = hoverStr + 'background-color: ' + window.tinycolor(fill.toRgb()).darken(5).toRgbString() + ';';
+          var text = window.tinycolor.mostReadable(fill, ['#fff', '#000']);
+          str = str + 'color: ' + text.toRgbString() + ';';
+        }
+        
+        add_css_rule('.button.' + key, str);
+        add_css_rule('.button.' + key + ':hover, .button.' + key + '.touched, .button.' + key + ':focus', hoverStr);
+        this.classes[key] = [str, hoverStr];
+      }
+      return true;
+    },
+    add_classes: function(button) {
+      if(!button) { throw "need button"; }
+      var key = this.keyify(button);
+      var classes = 'button ' + key;
+      if(button.hidden) {
+        classes = classes + " hidden_button";
+      } else if(button.empty) {
+        classes = classes + " empty";
+      }
+      if(button.link_disabled) {
+        classes = classes + " link_disabled";
+      }
+      Ember.set(button, 'display_class', classes);
+    }
+  });
+  
+  function create_sheet() {
+    // TODO: this is an attempted optimization for a poorly-performing method
+    if(styleElement) { return; }
+    
+    // Create the <style> tag
+    var newStyle = document.createElement('style');
+    newStyle.setAttribute('data-for-board', 'true');
+
+    // Add a media (and/or media query) here if you'd like!
+    // style.setAttribute("media", "screen")
+    // style.setAttribute("media", "@media only screen and (max-width : 1024px)")
+
+    // WebKit hack :(
+    newStyle.appendChild(document.createTextNode(''));
+
+    // Remove prior instance if one existed
+    if(styleElement) {
+      document.head.removeChild(styleElement);
+    }
+    
+    // Add the <style> element to the page
+    document.head.appendChild(newStyle);
+
+    styleElement = newStyle;
+  }
+  function add_css_rule(selector, rules, index) {
+    var sheet = styleElement.sheet;
+    if(sheet.insertRule) {
+      sheet.insertRule(selector + '{' + rules + '}', index);
+    } else {
+      sheet.addRule(selector, rules, index);
+    }
+  }
+}).call(boundClasses);
+
+export default boundClasses;

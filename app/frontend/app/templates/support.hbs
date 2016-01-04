@@ -1,0 +1,67 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+      <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>
+      {{t "CoughDrop Support" key='coughdrop_support'}}
+    </h3>
+  </div>  
+  <div class="modal-body">
+    <p>
+      {{t "Stumped? Something not working like you think it should? We're always on the lookout for ways to make CoughDrop better! Please tell us what you think, what's broken, or what you'd like to see made easier." key='support_intro'}}
+    </p>
+    <p>
+      {{#if app_state.no_linky}}
+        {{t "After checking our support site for common questions, if you still need to get in touch with us please fill out the form below." key='support_through_site_no_link'}}
+      {{else}}
+        {{t "After <a href='https://coughdrop.zendesk.com' target='_blank'>checking our support site</a> for common questions, if you still need to get in touch with us please fill out the form below." key='support_through_site'}}
+      {{/if}}
+    </p>
+    <form class="form-horizontal" {{action "submit_message" on="submit"}}>
+      <div class="form-group">
+        <div class="col-sm-7 col-sm-offset-3">
+          <h3 style="margin-bottom: -5px; font-size: 18px;">{{t "Report a Problem/Share Feedback" key='problem_or_feedback'}}</h3>
+        </div>
+      </div>
+      {{#unless app_state.currentUser}}
+        <div class="form-group">
+          <label for="name" class="col-sm-3 control-label">{{t "Name" key='name'}}</label>
+          <div class="col-sm-7">
+            {{input value=name class="form-control" id="name" placeholder="Your Name"}}
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email" class="col-sm-3 control-label">{{t "Email" key='email'}}</label>
+          <div class="col-sm-7">
+            {{input value=email class="form-control" id="email" placeholder="you@example.com"}}
+          </div>
+        </div>
+      {{/unless}}
+      <div class="form-group">
+        <label for="subject" class="col-sm-3 control-label">{{t "Subject" key='subject'}}</label>
+        <div class="col-sm-7">
+          {{input value=subject class="form-control" id="subject" placeholder=""}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="message" class="col-sm-3 control-label">{{t "Message" key='message'}}</label>
+        <div class="col-sm-7">
+          {{textarea value=message class="form-control" id="message" placeholder="" rows=4}}
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-3 col-sm-7">
+          <button disabled={{disabled}} type="submit" class="btn btn-primary">{{t "Send Message" key='send_message'}}</button>
+          <button {{action "close"}} class="btn btn-default">{{t "Cancel" key='cancel'}}</button>
+          <span style="padding-left: 5px;">{{#link-to "troubleshooting"}}{{t "troubleshooting" key='troubleshooting'}}{{/link-to}}</span>
+        </div>
+      </div>    
+      {{#if error}}
+        <div class="form-group">
+          <div class="col-sm-offset-3 col-sm-7">
+            <p class="text-danger">{{t "Submission failed, please try again" key='ticket_failed'}}</p>    
+          </div>
+        </div>
+      {{/if}}
+    </form>
+  </div>
+{{/modal-dialog}}

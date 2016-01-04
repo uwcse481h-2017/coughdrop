@@ -1,0 +1,38 @@
+<div class='row'>
+  <div class='col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3'>
+    <h2>{{t "Login Help" key='login_help'}}</h2>
+    <p style="margin-bottom: 30px; display: none;">
+      CoughDrop requires a mycoughdrop.com account. After signing up on the web site
+      you should have received an email with your user name. Enter that user name along
+      with the password you set while signing up to log in.
+    </p>
+    <form {{action "submitKey" on="submit"}}>
+      {{#if response.email_sent}}
+        <div class='form-group'>
+          {{t "Email sent! Be sure to check your spam folder!" key='email_sent'}}
+          {{#if response.message}}
+            {{t "NOTE:" key='note_colon'}} {{response.message}}
+          {{/if}}
+        </div>
+      {{else}}
+        <div class='form-group'>
+          <p>
+            {{t "If you're unsure what your login is, please enter your email address and we'll send you a link you can use to reset your password." key='password_reset_prompt'}}
+            {{#link-to "login"}}Back to login{{/link-to}}
+          </p>
+        </div>
+        <div class='form-group'>
+          {{input value=name class="form-control input-lg" id="name" placeholder="User name or email address"}}
+        </div>
+        <div class='form-group'>
+          {{#if response.message}}
+            <p>
+              {{response.message}}
+            </p>
+          {{/if}}
+          <button class='btn btn-primary btn-lg' type='submit'>{{t "Submit" key='submit'}}</button>
+        </div>
+      {{/if}}
+    </form>
+  </div>
+</div>

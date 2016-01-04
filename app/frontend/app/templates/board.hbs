@@ -1,0 +1,20 @@
+{{#if model.id}}
+  {{outlet}}
+{{else}}
+  <div class="board_status">
+    {{#if persistence.online}}
+      {{#if model.error.deleted}}
+        <p>{{t "This board has been deleted." key='board_deleted'}}</p>
+        {{#if model.error.key}}
+          <p>{{#link-to 'board.history' model.error.id}}{{t "Review the edit history for this board." key='review_edit_history'}}{{/link-to}}</p>
+        {{/if}}
+      {{else if model.error.never_existed}}
+        <p>{{t "It looks like this board doesn't exist. Please check the link that brought you here to make sure it's correct." key='board_doesnt_exist'}}</p>
+      {{else}}
+        <p>{{t "You don't have permission to access this board, or it doesn't exist." key='no_permissions'}}</p>
+      {{/if}}
+    {{else}}
+      <p>{{t "This board isn't available, or hasn't been synced for offline use. <a href='#'>Learn more about using boards offline.</a>" key='board_not_synced'}}</p>
+    {{/if}}
+  </div>
+{{/if}}

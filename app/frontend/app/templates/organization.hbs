@@ -1,0 +1,46 @@
+<div class="row">
+  <div class="col-md-3 col-sm-5">
+    <div class="well" style="text-align: center;">
+      <h2 style="margin-bottom: 10px;">
+        <span class="glyphicon glyphicon-paperclip"></span>
+        {{#if model.permissions.view}}
+          {{ model.name }}
+        {{else}}
+          {{t "Organization" key='organization'}}
+        {{/if}}
+      </h2>
+      <div>
+        {{t "user" key='user_count' count=model.total_licenses }},
+        {{t "manager" key='manager_count' count=model.total_managers }}
+      </div>
+      {{#if model.created}}
+        <div title="{{unbound date model.created}}">{{t "created" key='created'}} {{date_ago model.created}}</div>
+      {{/if}}
+    </div>
+    {{#if model.permissions.edit}}
+      <div class="btn-group-vertical" style="width: 100%;">
+        {{#link-to 'organization.index' model.id class='btn btn-default'}}{{t "Admin" key='admin'}}{{/link-to}}
+        {{#link-to 'organization.reports' model.id class='btn btn-default'}}{{t "Reports" key='reports'}}{{/link-to}}
+        {{#if model.permissions.update_licenses}}
+            <span class="btn btn-default">
+              {{input value=model.allotted_licenses class="form-control inline inline-licenses"}}
+              {{t "licenses" key='licenses'}}
+              <button class="btn btn-default" {{action "update_org"}}>{{t "update" key='update'}}</button>
+            </span>
+        {{/if}}
+        {{#if model.admin}}
+          {{#if model.permissions.manage}}
+            <span class="btn btn-default">
+              {{input value=masquerade_user_name placeholder="user name" class="form-control inline inline-masquerade"}}
+              <button class="btn btn-default" {{action "masquerade"}}>{{t "masquerade" key='masquerade'}}</button>
+            </span>
+          {{/if}}
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+  <div class="col-md-9 col-sm-7">
+    {{outlet}}
+  </div>
+</div>
+

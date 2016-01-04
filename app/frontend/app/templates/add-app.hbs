@@ -1,0 +1,20 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>
+      <span class="glyphicon glyphicon-phone"></span>
+      {{t "Add the CoughDrop App" key='add_the_cough_drop_app'}}
+    </h3>
+  </div>
+  <div class="modal-body">
+    {{#if device.android}}
+      {{t "In Chrome, click Settings -> Add to Homescreen to add CoughDrop as an app on this device" key='cough_drop_app_android'}}
+    {{else}}
+      {{#if device.ios}}
+        {{t "Click Share (<img src='http://i.stack.imgur.com/6Yn8V.png' style='height: 20px;'/>) -> Add to Home Screen to add CoughDrop as an app on this device" key='cough_drop_app_ios'}}
+      {{else}}
+        {{t "CoughDrop isn't available in app stores, but you can still install it as an app on your phone or tablet. Just go to mycoughdrop.com on your device and log in for instructions. Android devices should use Chrome and iOS devices should use Safari. If you want to use CoughDrop often on another device, just bookmark it!" key='cough_drop_app_other'}}
+      {{/if}}
+    {{/if}}
+  </div>
+{{/modal-dialog}}

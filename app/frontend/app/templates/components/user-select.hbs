@@ -1,0 +1,8 @@
+{{#if for_user_image}}
+  <span style="display: inline-block; width: 35px;">
+    <img src={{for_user_image}} style="height: 35px; max-width: 35px;"/>
+  </span>
+{{/if}}
+<span style="display: inline-block; width: calc(100% - 40px);">
+  {{bound-select select_class="form-control" select_id=select_id content=users selection=selection action=action }}
+</span>

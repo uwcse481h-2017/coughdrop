@@ -1,0 +1,87 @@
+import Ember from 'ember';
+import i18n from './i18n';
+import persistence from './persistence';
+
+var progress_tracker = Ember.Object.extend({
+  success_wait: 2500,
+  error_wait: 2500,
+  track: function(progress, status_callback) {
+    this.track_ids = this.track_ids || {};
+    var id = null;
+    while(!id || this.track_ids[id]) {
+      id = Math.random() * 99999;
+    }
+    var _this = this;
+    this.check(progress.status_url, function(data) {
+      if(_this.track_ids[id]) {
+        status_callback(data);
+      }
+    }, 0, id);
+    this.track_ids[id] = true;
+    return id;
+  },
+  untrack: function(track_id) {
+    this.track_ids = this.track_ids || {};
+    if(track_id) {
+      this.track_ids[track_id] = false;
+    }
+  },
+  check: function(url, status_callback, error_count, track_id) {
+    error_count = error_count || 0;
+    var _this = this;
+    persistence.ajax(url, {type: 'GET'}).then(function(data) {
+      data.progress.still_working = false;
+      if(!data.progress.finished_at) {
+        data.progress.still_working = true;
+        Ember.run.later(_this, function() {
+          if(this.track_ids[track_id]) {
+            this.check(url, status_callback, 0, track_id);
+          }
+        }, progress_tracker.success_wait);
+      }
+      status_callback(data.progress);
+//       Example progress object:
+//       {
+//         id: id,
+//         status_url: url,
+//         status: (started|pending|finished|errored)
+//       }
+    }, function(err) {
+      if(error_count > 3) {
+        status_callback({
+          status: 'errored',
+          sub_status: 'server_unresponsive'
+        });
+      } else {
+        Ember.run.later(_this, function() {
+          if(this.track_ids[track_id]) {
+            this.check(url, status_callback, error_count + 1, track_id);
+          }
+        }, progress_tracker.error_wait);
+      }
+    });
+  },
+  status_text: function(status, sub_status) {
+    var res = null;
+    if(status == 'pending') {
+      res = i18n.t('initializing', "Initializing...");
+    } else if(status == 'started') {
+      if(sub_status == 'generating_files') {
+        res = i18n.t('generating_files', "Generating file(s)...");
+      } else if(sub_status == 'converting_file' || sub_status == 'converting_files') {
+        res = i18n.t('converting_files', "Converting file(s)");
+      } else if(sub_status == 'uploading_file' || sub_status == 'uploading_files') {
+        res = i18n.t('finalizing files', "Finalizing file(s)");
+      } else {
+        res = i18n.t('progressing', "Processing...");
+      }
+    } else if(status == 'finished') {
+      res = i18n.t('progress_ready', "Ready!");
+    } else if(status == 'errored') {
+      res = i18n.t('progress_error', "Error");
+    }
+    return res;
+  }
+}).create();
+
+export default progress_tracker;

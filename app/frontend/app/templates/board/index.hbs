@@ -1,0 +1,72 @@
+{{#button-listener compute_height='compute_height' button_event='button_event'}}
+  {{#if teaser_description}}
+    <div id="board_description">
+      <span {{action "boardDetails"}}>
+        {{#unless model.public}}
+          <span class="glyphicon glyphicon-lock"></span>
+        {{/unless}}
+        {{#if cc_license}}
+          <img src="{{path "images/cc.png"}}" alt="cc license" style="opacity: 0.5;"/>
+        {{else}}
+          {{#if pd_license}}
+            <img src="{{path "images/pd.png"}}" alt="public domain" style="opacity: 0.5;"/>
+          {{/if}}
+        {{/if}}
+        {{teaser_description}}
+      </span>
+    </div>
+  {{/if}}
+  {{#if show_word_suggestions}}
+    <div id="word_suggestions" class="advanced_selection">
+      {{#if suggestions.ready}}
+        {{#each suggestions.list as |suggestion|}}
+          <a href='#' class="suggestion" {{action "complete_word" suggestion}}>
+            {{suggestion}}
+          </a>
+        {{/each}}
+      {{else}}
+        {{#if suggestions.error}}
+          {{t "Word suggestions failed to load" key='word_suggestions_failed'}}
+        {{else}}
+          {{t "Loading word suggestions..." key='loading_word_suggestions'}}
+        {{/if}}
+      {{/if}}
+    </div>
+  {{/if}}
+  <!--canvas id="board_canvas" style="left: 0; position: absolute; margin-top: -10px;"></canvas-->
+  {{#with model as |board|}}
+  <div style={{board_style}} class={{display_class}} data-id={{board.id}}>
+    {{#if nothing_visible_not_edit}}
+      <div class="board_status">
+        <p>{{t "This board hasn't been set up yet, or doesn't have any visible buttons." key='no_visible_buttons'}}</p>
+        {{#if board.permissions.edit}}
+          {{#unless app_state.speak_mode}}
+            <button class='btn btn-default btn-lg' {{action "toggleEditMode" }}>{{t "Edit this Board" key='edit_this_board'}}</button>
+          {{/unless}}
+        {{/if}}
+      </div>
+    {{else}}
+      {{#if board.grid}}
+        {{#if ordered_buttons}}
+          {{#each ordered_buttons as |row|}}
+            <div class="button_row">
+                {{#each row as |button|}}
+                  {{partial "button"}}
+                {{/each}}
+            </div>
+          {{/each}}
+        {{else}}
+          <span class="board_status">
+            {{t "Loading..." key='loading'}}
+          </span>
+        {{/if}}
+      {{else}}
+        <span class="board_status">
+          {{t "Grid not defined!" key='grid_not_defined'}}
+        </span>
+      {{/if}}
+    {{/if}}
+    <div style="clear: left;"></div>
+  </div>
+  {{/with}}
+{{/button-listener}}

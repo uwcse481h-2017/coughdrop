@@ -1,0 +1,329 @@
+import Ember from 'ember';
+import CoughDrop from '../app';
+// import i18n from './i18n';
+// import modal from './modal';
+
+// NOTE: there is an assumption that each stashed value is independent and 
+// non-critical, so for example if one attribute got renamed it would not
+// break anything, or affect any other value.
+var memory_stash = {};
+var capabilities = null;
+var stashes = Ember.Object.extend({
+  connect: function(container, application) {
+    application.register('cough_drop:stashes', stashes, { instantiate: false, singleton: true });
+    Ember.$.each(['model', 'controller', 'view', 'route'], function(i, component) {
+      application.inject(component, 'stashes', 'cough_drop:stashes');
+    });
+  },
+  db_connect: function(cap) {
+    capabilities = cap;
+    capabilities.storage_find({store: 'settings', key: 'stash'}).then(function(stash) {
+      for(var idx in stash) {
+        if(idx != 'raw' && idx != 'storageId' && idx != 'changed' && stash[idx] !== undefined) {
+          memory_stash[idx] = JSON.parse(stash[idx]);
+          stashes.set(idx, JSON.parse(stash[idx]));
+        }
+      }
+    }, function(err) {
+      console.debug('COUGHDROP: db storage stashes not found');
+    });
+  },
+  setup: function() {
+    stashes.memory_stash = memory_stash;
+    stashes.prefix = 'cdStash-';
+    try {
+      for(var idx = 0, l = localStorage.length; idx < l; idx++) {
+        var key = localStorage.key(idx);
+        if(key && key.indexOf(stashes.prefix) === 0) {
+          var real_key = key.replace(stashes.prefix, '');
+          try {
+            memory_stash[real_key] = JSON.parse(localStorage[key]);
+            stashes.set(real_key, JSON.parse(localStorage[key]));
+          } catch(e) { }
+        }
+      }
+      localStorage[stashes.prefix + 'test'] = Math.random();
+      stashes.set('enabled', true);
+    } catch(e) {
+      stashes.set('enabled', false);
+      if(console.debug) {
+        console.debug('COUGHDROP: localStorage not working');
+        console.debug(e);
+      } else {
+        console.log('COUGHDROP: localStorage not working');
+        console.log(e);
+      }
+    }
+    var defaults = {
+      'working_vocalization': [],
+      'current_mode': 'default',
+      'usage_log': [],
+      'boardHistory': [],
+      'browse_history': [],
+      'history_enabled': true,
+      'root_board_state': null,
+      'sidebar_enabled': false,
+      'sticky_board': false,
+      'remembered_vocalizations': [], // TODO: this should probably be remembered server-side, change when speaking as someone else
+      'stashed_buttons': [],
+      'ghost_utterance': false,
+      'recent_boards': [],
+      'logging_paused_at': null,
+      'last_stream_id': null
+    };
+    // TODO: some of these will want to be retrieved from server stash, not just localstorage
+    for(var idx in defaults) {
+      var val = null;
+      if(stashes.get('enabled')) {
+        val = localStorage[stashes.prefix + idx] && JSON.parse(localStorage[stashes.prefix + idx]);
+      }
+      if(val === undefined || val === null) {
+        val = defaults[idx];
+      }
+      stashes.set(idx, val);
+      memory_stash[idx] = val;
+    }
+  },
+  flush: function(prefix, ignore_prefix) {
+    var full_prefix = stashes.prefix + (prefix || "");
+    var full_ignore_prefix = ignore_prefix && (stashes.prefix + ignore_prefix);
+    if((!prefix || prefix == 'auth_') && ignore_prefix != 'auth_') {
+      stashes.flush_db_id();
+    }
+    for(var idx = 0, l = localStorage.length; idx < l; idx++) {
+      var key = localStorage.key(idx);
+      if(key && key.indexOf(full_prefix) === 0) {
+        if(ignore_prefix && key.indexOf(full_ignore_prefix) === 0) {
+        } else {
+          try {
+            stashes.set(key.replace(stashes.prefix, ''), undefined);
+            delete memory_stash[key.replace(stashes.prefix, '')];
+            localStorage.removeItem(key);
+            idx--;
+          } catch(e) { }
+        }
+      }
+    }
+  },
+  persist: function(key, obj) {
+    if(!key) { return; }
+    this.persist_object(key, obj, true);
+    stashes.set(key, obj);
+
+    if(memory_stash[key] != obj) {
+      memory_stash[key] = obj;
+      if(capabilities) {
+        var stringed_stash = {};
+        for(var idx in memory_stash) {
+          stringed_stash[idx] = JSON.stringify(memory_stash[idx]);
+        }
+        stringed_stash.storageId = 'stash';
+        // I intended for this to be a fallback in case localStorage data got lost
+        // somehow, which is why the db id is also being stored in the cookie
+        // as a fallback for the db id which is usually kept in localStorage.
+        capabilities.storage_store({store: 'settings', id: 'stash', record: stringed_stash});
+      }
+    }
+  },
+  persist_object: function(key, obj, include_prefix) {
+    var _this = this;
+    // Why aren't we using client-side encryption? 
+    // http://matasano.com/articles/javascript-cryptography/
+    // Since the encryption key would have to be stored in either localStorage
+    // or IndexedDB, anyone who has access to the datastores also has
+    // access to the unprotected encryption key.
+    stashes.persist_raw(key, JSON.stringify(obj), include_prefix);
+
+    if(key == 'auth_settings' && obj.user_name) {
+      document.cookie = "authDBID=" + obj.user_name;
+    }
+  },
+  flush_db_id: function() {
+    document.cookie = 'authDBID=';
+  },
+  persist_raw: function(key, obj, include_prefix) {
+    if(include_prefix) { key = stashes.prefix + key; }
+    try {
+      localStorage[key] = obj.toString();
+    } catch(e) { }
+  },
+  get_object: function(key, include_prefix) {
+    var res = null;
+    try {
+      res = JSON.parse(stashes.get_raw(key, include_prefix)) || this.get(key);
+    } catch(e) { }
+    return res;
+  },
+  get_db_id: function() {
+    var auth_settings = stashes.get_object('auth_settings', true);
+    if(auth_settings) {
+      return auth_settings.user_name;
+    } else {
+      var keys = (document.cookie || "").split(/\s*;\s*/);
+      var key = keys.find(function(k) { return k.match(/^authDBID=/); });
+      return key && key.replace(/^authDBID=/, '');
+    }
+  },
+  get_raw: function(key, include_prefix) {
+    if(include_prefix) { key = stashes.prefix + key; }
+    var res = null;
+    try {
+      res = localStorage[key];
+    } catch(e) { }
+    return res;
+  },
+  geo: {
+    poll: function() {
+      if(navigator.geolocation) {
+        if(stashes.geo.watching) {
+          navigator.geolocation.clearWatch(stashes.geo.watching);
+        }
+        stashes.geo.watching = navigator.geolocation.watchPosition(function(position) {
+          stashes.geo.latest = position;
+        }, function(error) {
+          stashes.geo.latest = null;
+        });
+      }
+    }
+  },
+  remember: function() {
+    if(!stashes.get('history_enabled')) { return; }
+    // TODO: this should be persisted server-side
+    var list = stashes.get('remembered_vocalizations');
+    if(stashes.get('working_vocalization').length === 0) { return; }
+    var obj = {
+      vocalizations: stashes.get('working_vocalization')
+    };
+    obj.sentence = obj.vocalizations.map(function(v) { return v.label; }).join(" ");
+    if(!list.find(function(v) { return v.sentence == obj.sentence; })) {
+      list.pushObject(obj);
+    }
+    stashes.persist('remembered_vocalizations', list);
+  },
+  current_timestamp: function() {
+    return Date.now() / 1000;
+  },
+  log_event: function(obj, user_id) {
+    var timestamp = stashes.current_timestamp();
+    var geo = null;
+    if(stashes.geo.latest) { // TODO: timeout if it's been too long?
+      geo = [stashes.geo.latest.coords.latitude, stashes.geo.latest.coords.longitude, stashes.geo.latest.coords.altitude];
+    }
+    var log_event = null;
+    var usage_log = stashes.get('usage_log');
+    if(obj && user_id) {
+      if(obj.buttons) {
+        log_event = {
+          type: 'utterance',
+          timestamp: timestamp,
+          user_id: user_id,
+          geo: geo,
+          utterance: obj
+        };
+      } else if(obj.button_id) {
+        log_event = {
+          type: 'button',
+          timestamp: timestamp,
+          user_id: user_id,
+          geo: geo,
+          button: obj
+        };
+      } else if(obj.tallies) {
+        log_event = {
+          type: 'assessment',
+          timestamp: timestamp,
+          user_id: user_id,
+          geo: geo,
+          assessment: obj
+        };
+      } else if(obj.note) {
+        log_event = {
+          type: 'note',
+          timestamp: timestamp,
+          user_id: user_id,
+          geo: geo,
+          note: obj
+        };
+      } else {
+        log_event = {
+          type: 'action',
+          timestamp: timestamp,
+          user_id: user_id,
+          geo: geo,
+          action: obj
+        };
+      }
+      if(log_event) {
+        console.log(log_event);
+        stashes.persist('last_event', log_event);
+        usage_log.push(log_event);
+      }
+    }
+    stashes.persist('usage_log', usage_log);
+    stashes.push_log(true);
+    return log_event;
+  },
+  log: function(obj) {
+    if(!stashes.get('history_enabled')) { return null; }
+    if(!stashes.get('logging_enabled')) { return null; }
+    if(stashes.get('logging_paused_at')) {
+      var last_event = stashes.get('last_event');
+      var pause = stashes.get('logging_paused_at');
+      var sixty_minutes_ago = (new Date()).getTime() - (60 * 60 * 1000);
+      var six_hours_ago = (new Date()).getTime() - (6 * 60 * 60 * 1000);
+      if(last_event && last_event.timestamp > pause && last_event < sixty_minutes_ago) {
+      // TEMP:
+//         modal.warning(i18n.t('logging_resumed', "Logging has resumed automatically after at least an hour of inactivity"));
+        if(stashes.controller) {
+          stashes.controller.set('logging_paused_at', null);
+        }
+        stashes.persist('logging_paused_at', null);
+      } else if(last_event && last_event.timestamp > pause && last_event < six_hours_ago) {
+//         modal.warning(i18n.t('logging_resumed', "Logging has resumed automatically after being paused for over six hours"));
+        if(stashes.controller) {
+          stashes.controller.set('logging_paused_at', null);
+        }
+        stashes.persist('logging_paused_at', null);
+      } else {
+        return null;
+      }
+    }
+    return stashes.log_event(obj, stashes.get('speaking_user_id'));
+  },
+  push_log: function(only_if_convenient) {
+    var usage_log = stashes.get('usage_log');
+    var timestamp = stashes.current_timestamp();
+    // Remove from local store and persist occasionally
+    var diff = (usage_log && usage_log[0] && usage_log[0].timestamp) ? (timestamp - usage_log[0].timestamp) : -1;
+    // TODO: add listener on persistence.online and trigger this log save stuff when reconnected
+    if(CoughDrop.session && CoughDrop.session.get('user_name') && stashes.get('online') && usage_log.length > 0) {
+      // If there's more than 10 events, or it's been more than 1 hour 
+      // since the last recorded event.
+      if(usage_log.length > 10 || diff == -1 || diff > (60 * 60 * 1000) || !only_if_convenient) {
+        var history = [].concat(usage_log);
+        stashes.persist('usage_log', []);
+        var log = CoughDrop.store.createRecord('log', {
+          events: history
+        });
+        log.cleanup();
+        log.save().then(function() {
+          // success!
+        }, function() {
+          // error, try again later
+          stashes.persist('usage_log', history.concat(stashes.get('usage_log')));
+        });
+      }
+    }
+    if(!stashes.timer) {
+      stashes.timer = Ember.run.later(function() {
+        stashes.timer = null;
+        stashes.push_log(only_if_convenient);
+      }, 30 * 60 * 1000);
+    }
+  }
+}).create({logging_enabled: false});
+stashes.setup();
+
+window.stashes = stashes;
+
+export default stashes;

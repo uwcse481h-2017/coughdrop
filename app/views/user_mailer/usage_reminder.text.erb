@@ -1,0 +1,23 @@
+Hello again, and thanks for joining CoughDrop! We wanted to take just a minute and make sure you knew about some of the powerful tools you have  access to with your CoughDrop account, so you can get the most out of your experience.
+<% if @supporter_no_supervisees %>
+* Supervising *
+It looks like you've signed up as a supervisor, but you don't have anybody to supervise. Once you've been added by communicators as a supervisor, you'll see their information show up on your dashboard, including notifications, recent logs, and quick actions for things like loading their boards and reports, or even firing off a quick assessment! We're always working to make things better, so keep an eye out for additional improvements here.
+<% elsif @no_recent_activity || @no_home_board %>
+* Getting Started *
+If you haven't had much chance to use CoughDrop yet, remember that it's a simple, flexible communication app that gives you unique insights into what's working. It's easy to get started, just pick a home board, open it in Speak Mode and start talking! You can always use one of the suggested starter boards, or create your own. And don't forget that you can connect supervisors to a communicator's account, and then everyone can see the boards and reports on their own devices too!
+<% else %>
+* Doing More *
+CoughDrop is more than just a communication app, it's a movement. We're trying to show everyone just how much of a different flexible, team-enabled resources can be in helping communicators make their voices heard. Your support helps make that happen, so thank you for joining us. We're constantly working with experts to find ways to improve the app to better support the many different communication strategies that are out there. If you have any thoughts or suggestions, please don't hesitate to share.
+<% end %>
+<% if @logging_disabled %>
+* Logging *
+CoughDrop has powerful reporting and logging built-in. Once you turn on logging (<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/stats) then any usage that happens will be automatically gathered into detailed reports and summaries. The communicator and their support team can see things like what time of day communication is happening, what types of speech are being used and where on the screen buttons are being pressed, all with the goal of working toward better communication strategies.
+<% end %>
+<% if @no_subscription %>
+* Subscription *
+If you like what you're seeing with CoughDrop, feel free to update your subscription settings (<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/subscription) to be able to keep using CoughDrop for the long-term!
+<% end %>
+We hope this was a helpful check-in! If you have any questions or concerns, please let us know on our support site (https://coughdrop.zendesk.com) by submitting a request and we'll be happy to help you out.
+
+Thanks!
+-The CoughDrop Team

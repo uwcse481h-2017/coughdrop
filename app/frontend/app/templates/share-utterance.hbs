@@ -1,0 +1,25 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>{{t "Share Text" key='share_text'}}</h3>
+  </div>
+  <div class="modal-body">
+    <p>{{t "Copy the message you entered to share it on other apps/sites<br/>(for better sharing install the CoughDrop mobile app)." key='copy_sentence'}}</p>
+    
+    <div class="row" style="margin: 30px 0;">
+      <div class="col-sm-8">
+        <input type="text" value={{sentence}} class="form-control select_on_click"/>
+      </div>
+      <div class="col-sm-4">
+        <p class="form-control-static" style="line-height: 34px; vertical-align: middle;">
+          {{#if utterance_record.link}}
+            <a href={{utterance_record.link}} target="_blank"><span class="glyphicon glyphicon-hand-up"></span> Link</a>
+          {{/if}}
+        </p>
+      </div>
+    </div>
+    
+    <div id="share_links">
+    </div>
+  </div>    
+{{/modal-dialog}}

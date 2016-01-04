@@ -1,0 +1,34 @@
+<div style={{button.computed_style}} class={{button.computed_class}} data-id={{button.id}} tabindex="0">
+  {{#if button.pending}}
+    <div class="pending">
+      <img src="{{path 'images/spinner.gif'}}" />
+    </div>
+  {{/if}}
+  <div class={{button.action_class}}>
+    <span class="action">
+      <img src={{button.action_image}} alt={{button.action_alt}} />
+    </span>
+  </div>
+  <span style={{button.image_holder_style}}>
+    {{#unless app_state.currentUser.hide_symbols}}
+      <img src={{button.image.best_url}} onerror="button_broken_image(this);" style={{button.image_style}} class="symbol">
+    {{/unless}}
+  </span>
+  {{#if button.sound}}
+    <audio style="display: none;" preload="auto" src={{button.sound.best_url}} rel={{button.sound.url}}></audio>
+  {{/if}}
+  <div class={{button_symbol_class}}>
+    {{#if editModeNormalText}}
+      {{#if button.sound}}
+        <div class="sound_container">
+          <span class="glyphicon glyphicon-volume-up"></span>
+        </div>
+      {{/if}}
+      {{label-field value=button.label class="button-label" placeholder="enter label"}}
+    {{else}}
+      {{#unless button.hide_label}}
+        <span class="button-label">{{button.label}}</span>
+      {{/unless}}
+    {{/if}}
+  </div>
+</div>

@@ -1,0 +1,22 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>{{t "Button List for %{board_name}" key='button_list_for' board_name=model.board.name}}</h3>
+  </div>
+  <div class="modal-body">
+    <p>
+      <a href="#" {{action 'download_list'}}>{{t "Download this list" key='download_this_list'}}</a>
+    </p>
+    <div class="list-group">
+      {{#each sorted_buttons as |button|}}
+        <div class="list-group-item" style="font-size: 20px;">
+          {{button.label}}
+          <div class="text-muted" style="font-size: 10px;">
+            {{#link-to 'board' button.board_key class="text-muted"}}{{button.board_key}}{{/link-to}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  </div>
+{{/modal-dialog}}
+

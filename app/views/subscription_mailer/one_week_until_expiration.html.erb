@@ -1,0 +1,23 @@
+Hello! We wanted to reach out and make sure you know that your subscription for
+the CoughDrop user account <b><%= @user.user_name %></b> is about to expire. 
+Hopefully CoughDrop has been a useful tool and you're excited to 
+keep using it. We're constantly working with experts to make CoughDrop easier
+and more informative, and it'd be great to have you along for the ride.<br/><br/> 
+
+Remember, your subscription doesn't just help you or the communicators you work with, 
+it also goes to help fund communicators in need, and to help push technology 
+forward for the thousands communicators in need around the world!<br/><br/>
+
+Your account is set to expire <b><%= @user.expires_at.to_s(:long_ordinal) %></b>. 
+Please 
+<a href="<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/subscription">update your subscription settings</a> 
+so that you don't miss out on the great resource CoughDrop can be to help
+struggling communicators.<br/><br/>
+
+If you need help finding a funding solution, please don't be afraid to reach out to us, 
+we're willing to work with individuals to find a good solution. Just 
+<a href="https://coughdrop.zendesk.com">access our support site</a>
+to make a request, and we'll be happy to work with you.<br/><br/>
+
+Thanks!<br/>
+-The CoughDrop Team

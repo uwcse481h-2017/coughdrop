@@ -1,0 +1,40 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>
+      {{t "Premium Membership Required" key='premium_required'}}
+    </h3>
+  </div>
+  <div class="modal-body">
+    <span class="glyphicon glyphicon-info-sign" style="float: left; margin-right: 10px; font-size: 30px;"></span> 
+    {{#if model.remind_to_upgrade}}
+      <p>
+        {{t "Your premium membership has expired. CoughDrop is a powerful service that helps many users communicate. Please " key='please_subscribe_1'}}
+        {{#link-to 'user.subscription' app_state.currentUser.user_name}}{{t "purchase a premium subscription" key='please_subscribe_2'}}{{/link-to}}
+        {{t "to support this good cause." key='please_subscribe_3'}}
+      </p>
+      <p>
+        {{t "Remember, therapists, parents and other supporting users can sign up for a free subscription used for supporting communicators. If you need help with your subscription, please don't hesitate to reach out to us." key='please_subscribe_4'}}
+      </p>
+    {{else}}
+      <p>
+        {{t "CoughDrop is a powerful, flexible communication tool with lots of great features. Some features, including this one, are only available to users who have a paid premium subscription. Please " key='purchase_subscription_1'}}
+        {{#if app_state.currentUser}}
+          {{#link-to 'user.subscription' app_state.currentUser.user_name}}{{t "purchase a premium subscription" key='purchase_subscription_2'}}{{/link-to}}
+        {{else}}
+          {{t "purchase a premium subscription" key='purchase_subscription_2'}}
+        {{/if}}
+        {{t "to support this good cause and to unlock this feature. Remember, therapists, parents and other supporting users can sign up for a free subscription used for supporting communicators." key='purchase_subscription_3'}}
+      </p>
+    {{/if}}
+    <div style="clear: left;"></div>
+  </div>
+  <div class="modal-footer">
+    {{#if model.remind_to_upgrade}}
+      <a href="#" class="btn btn-default btn-lg" {{action 'close'}}>{{t "Okay" key='okay'}}</a>
+    {{else}}
+      <a href="#" class="btn btn-default btn-lg" {{action 'close'}}>{{t "Close" key='close'}}</a>
+    {{/if}}
+    {{#link-to 'user.subscription' app_state.currentUser.user_name class='btn btn-lg btn-primary'}}{{t "Update My Subscription" key='update_my_subscription'}}{{/link-to}}
+  </div>
+{{/modal-dialog}}

@@ -1,0 +1,413 @@
+<form class="form-horizontal">
+<div class={{if actionState 'active' 'hidden'}}>
+  <div class="form-group">
+    <label for="action" class="col-sm-2 control-label">{{t "Action" key="action"}}</label>
+    <div class="col-sm-10"> 
+      {{bound-select select_class="form-control" select_id="action" content=buttonActions selection=model.buttonAction action=(action (mut model.buttonAction)) }}
+    </div>
+  </div>
+  {{#if model.folderAction}}
+    <div class="form-group">
+      <label class="col-sm-2 control-label">{{t "Board" key='board'}}</label>
+      <div class="col-sm-10"> 
+        <p class="form-control-static">
+          {{#if model.load_board.key}}
+            <img src={{model.icon}} style="height: 20px;"/>
+            <a href={{model.link}} target="_blank">{{model.load_board.key}}</a>
+          {{else}}
+            {{t "None set" key='none_set'}}
+          {{/if}} 
+        </p>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="change_to" class="col-sm-2 control-label">{{t "Find/Add" key='find_add'}}</label>
+      <div class="col-sm-10 options"> 
+        <span class="board_search_field">
+          {{input value=linkedBoardName class="form-control" id="change_to" placeholder="Board name or key"}}
+        </span>
+        <button class="btn btn-default" {{action "find_board"}}>{{t "Find" key='find'}}</button>
+        <button class="btn btn-default" {{action "build_board"}}>{{t "New" key='new'}}</button>
+        {{#unless pending_board}}                    
+          <div class="row" style="margin-top: 5px;">
+            <div class="col-sm-12">
+              {{bound-select select_class="form-control" select_id="board_search_type" content=board_search_options selection=board_search_type action=(action (mut board_search_type)) }}
+            </div>
+          </div>
+          {{#if foundBoards.ready}}
+            {{#if foundBoards.results}}
+              <div class="row" style="margin-top: 10px; max-height: 250px; overflow: auto;">
+                {{#each foundBoards.results as |board|}}
+                  <div class="col-sm-4" {{action "selectFoundBoard" board}}>
+                    <span class="well well-sm board_icon">
+                      {{partial "board-icon-without-link"}}
+                    </span>
+                  </div>
+                {{/each}}
+              </div>
+            {{else}}
+              <div style="margin-top: 10px;">
+                {{t "No results found for \"%{term}\"" key='no_results_for' term=foundBoards.term}}
+              </div>
+            {{/if}}
+          {{else}}
+            {{#if foundBoards.term}}
+              <div style="margin-top: 10px;">
+                {{t "Searching for \"%{term}\"..." key='searching_for' term=foundBoards.term}}
+              </div>
+            {{/if}}
+          {{/if}}
+        {{/unless}}
+      </div>
+    </div>
+    {{#if pending_board}}
+      {{#if supervisees}}
+        <div class="form-group">
+          <label for="for_user_id" class="col-sm-2 control-label">{{t "For" key='for'}}</label>
+          <div class="col-sm-10">
+            {{user-select select_id="for_user_id" users=supervisees selection=pending_board.for_user_id action=(action (mut pending_board.for_user_id)) }}
+          </div>
+        </div>
+      {{/if}}
+      <div class="form-group">
+        <label for="pending_board_name" class="col-sm-2 control-label">{{t "Name" key='name'}}</label>
+        <div class="col-sm-10">
+          {{input value=pending_board.name id="pending_board_name" class="form-control" placeholder="Board name"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="pending_board_key" class="col-sm-2 control-label">{{t "Key" key='key'}}</label>
+        <div class="col-sm-10">
+          {{input value=pending_board.key id="pending_board_key" class="form-control" placeholder=pending_board.key_placeholder}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label">{{t "Size" key='size'}}</label>
+        <div class="col-sm-4">
+          <div class="input-group">
+            <span class="input-group-btn">
+              <button type="button" class="btn btn-default" {{action "plus_minus" "minus" "pending_board.grid.rows"}}>-</button>
+            </span>
+            {{input value=pending_board.grid.rows class="form-control" id="pending_board_rows" placeholder="##" title="rows"}}
+            <span class="input-group-btn">
+              <button type="button" class="btn btn-default" {{action "plus_minus" "plus" "pending_board.grid.rows"}}>+</button>
+            </span>
+          </div>
+          <em style="padding-left: 35px;">{{t "Rows" key='row'}}</em>
+        </div>
+        <div class="col-sm-2"><p class="form-control-static"> by </p></div>
+        <div class="col-sm-4">
+          <div class="input-group">
+            <span class="input-group-btn">
+              <button type="button" class="btn btn-default" {{action "plus_minus" "minus" "pending_board.grid.columns"}}>-</button>
+            </span>
+            {{input value=pending_board.grid.columns class="form-control" id="pending_board_columns" placeholder="##" title="columns"}}
+            <span class="input-group-btn">
+              <button type="button" class="btn btn-default" {{action "plus_minus" "plus" "pending_board.grid.columns"}}>+</button>
+            </span>
+          </div>
+          <em style="padding-left: 35px;">{{t "Columns" key='columns'}}</em>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-10 col-sm-offset-2">
+          <div class="checkbox">
+            <label>
+              {{input checked=pending_board.copy_access type="checkbox"}}
+              {{t "Use same license and access settings as are set for this board" key='use_same_license'}}
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-10 col-sm-offset-2">
+          <button class="btn btn-primary" {{action "create_board"}}>{{t "Create" key='create'}}</button>
+          <button class="btn btn-default" {{action "cancel_build_board"}}>{{t "Cancel" key='cancel'}}</button>
+        </div>
+      </div>
+    {{/if}}
+  {{else}}
+    {{#if model.linkAction}}
+      <div class="form-group">
+        <label for="link_to" class="col-sm-2 control-label">
+          {{#if model.video.popup}}
+            <img src="{{path 'images/video.svg'}}" style="height: 20px; margin-left: -10px;"/>
+          {{else}}
+            <img src="{{path 'images/link.png'}}" style="height: 20px; margin-left: -10px;"/>
+          {{/if}}
+           {{t "URL" key='url'}}
+        </label>
+        <div class="col-sm-10 options"> 
+          {{input value=model.url class="form-control" id="link_to" placeholder="https://"}}
+        </div>
+      </div>
+      <!-- TODO: https://www.youtube.com/embed/PxSCo8rKsbY?rel=0&start=100&end=120&autoplay=0&controls=0&rel=0&showinfo=0 -->
+      {{#if model.video.type}}
+        <div class="form-group">
+          <div class="col-sm-10 col-sm-offset-2">
+            <div class="checkbox">
+              <label>
+                {{input type="checkbox" checked=model.video.popup}}
+                {{t "Show video in a popup" key='show_video_popup'}}
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-10 col-sm-offset-2">
+            <div class="video_box">
+              <iframe src={{model.video.test_url}} id="link_video_preview" frameborder="0"></iframe>
+            </div>
+            {{#if player}}
+              <div style="margin-top: 5px;">
+                <button class="btn btn-default" {{action "set_time" "start"}}>{{t "Set Start" key='set_start'}}</button>
+                <button class="btn btn-default" {{action "set_time" "end"}}>{{t "Set End" key='set_end'}}</button>
+                <button class="btn btn-default" {{action "clear_times"}}>{{t "Clear Times" key='clear_times'}}</button>
+              </div>
+            {{/if}}
+          </div>
+        </div>
+        {{#if model.video.popup}}
+          <div class="form-group">
+            <label for="youtube_start" class="col-sm-2 control-label">{{t "Start" key='start_at'}}</label>
+            <div class="col-sm-3"> 
+              {{input value=model.video.start class="form-control" id="youtube_start" placeholder="0"}}
+            </div>
+            <div class="col-sm-3"> 
+              <p class="form-control-static">
+                {{t "seconds" key='seconds'}}
+              </p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="youtube_end" class="col-sm-2 control-label">{{t "End" key='end_at'}}</label>
+            <div class="col-sm-3"> 
+              {{input value=model.video.end class="form-control" id="youtube_end" placeholder="ending"}}
+            </div>
+            <div class="col-sm-3"> 
+              <p class="form-control-static">
+                {{t "seconds" key='seconds'}}
+              </p>
+            </div>
+          </div>
+        {{/if}}
+      {{else}}
+        {{#if model.url}}
+          <div class="form-group">
+            <div class="col-sm-10 col-sm-offset-2">
+              <p class="form-control-static">
+                <a target="_blank" href={{model.fixed_url}}>{{t "open in a browser tab" key='open_in_browser'}}</a>
+              </p>
+            </div>
+          </div>
+        {{/if}}
+      {{/if}}
+    {{else}}
+      {{#if model.appAction}}
+        <div class="form-group">
+          <div class="col-sm-10"> 
+            <p class="form-control-static">
+              <a href="#" {{action 'set_app_find_mode' 'ios'}} class={{if ios_search 'really_bold'}}><span class={{ios_status_class}}></span> {{t "iOS" key='ios'}}</a> &nbsp;&nbsp;&nbsp;&nbsp;
+              <a href="#" {{action 'set_app_find_mode' 'android'}} class={{if android_search 'really_bold'}}><span class={{android_status_class}}></span> {{t "Android" key='android'}}</a> &nbsp;&nbsp;&nbsp;&nbsp;
+              <a href="#" {{action 'set_app_find_mode' 'web'}} class={{if web_search 'really_bold'}}><span class={{web_status_class}}></span> {{t "Web/Other" key='web_other'}}</a>
+            </p>
+          </div>
+        </div>
+        {{#if ios_search}}
+          <div class="form-group">
+            <div class="col-sm-10 col-sm-offset-2">
+              <strong>{{t "App to launch on iPhones/iPads/etc." key='launch_ios_app'}}</strong>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="app_name" class="col-sm-2 control-label">{{t "App" key='app'}}</label>
+            <div class="col-sm-10"> 
+              {{#if model.apps.ios}}
+                <div style="margin-bottom: 10px;">
+                  <span style="white-space: nowrap; overflow: hidden;">
+                    <strong>{{model.apps.ios.name}}</strong><br/>
+                    <span class="text-muted">{{model.apps.ios.author_name}}</span>
+                  </span>
+                  <br/>
+                  {{#if model.apps.ios.custom}}
+                    {{t "Custom mobile launch URL/scheme:" key='custom_launch'}}
+                    {{input value=model.apps.ios.launch_url class="form-control" placeholder="i.e. fb://feed"}}
+                  {{else}}
+                    {{#if model.apps.ios.launch_url}}
+                      <em class="text-muted">{{t "This app will be launched by CoughDrop" key='app_can_be_launched'}}</em>
+                    {{else}}
+                      <em class="text-danger">{{t "This app won't be launched by CoughDrop" key='app_cant_be_launched'}}</em>
+                      <br/><a href="#" {{action "set_custom"}}>advanced</a>
+                    {{/if}}
+                  {{/if}}
+                </div>
+              {{else}}
+                <p class="form-control-static">{{t "No app specified" key='no_app_specified'}}</p>
+              {{/if}}
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="app_search" class="col-sm-2 control-label">{{t "Find" key='find'}}</label>
+            <div class="col-sm-10 options"> 
+              <span class="board_search_field">
+                {{input value=ios_app_name class="form-control" id="app_search" placeholder="App name"}}
+              </span>
+              <button class="btn btn-default" {{action "find_app"}}>{{t "Find" key='find'}}</button>
+              {{#if foundApps.ready}}
+                {{#if foundApps.results}}
+                  <div class="row" style="margin-top: 10px; max-height: 250px; overflow: auto;">
+                    {{#each foundApps.results as |result|}}
+                      <div class="col-sm-12" {{action "pick_app" result}}>
+                        <div class="well well-sm" style="cursor: pointer; margin-bottom: 5px; line-height: 16px; white-space: nowrap; overflow: hidden;">
+                          <img src={{result.image_url}} alt="" style="width: 50px; height: 50px; margin-right: 5px; float: left;"/>
+                          {{result.name}}<br/>
+                          <span class="text-muted">
+                            {{result.author_name}}
+                            ${{result.price}}
+                          </span>
+                          <br/>
+                          {{#if result.launch_url}}
+                            <em class="text-muted">{{t "launchable" key='launchable'}}</em>
+                          {{else}}
+                            <em class="text-danger">{{t "not launchable" key='not_launchable'}}</em>
+                          {{/if}}
+                          <span style="clear: left;"></span>
+                        </div>
+                      </div>
+                    {{/each}}
+                  </div>
+                {{else}}
+                  <div style="margin-top: 10px;">
+                    {{t "No results found for \"%{term}\"" key='no_results_for' term=foundApps.term}}
+                  </div>
+                {{/if}}
+              {{else}}
+                {{#if foundApps.term}}
+                  <div style="margin-top: 10px;">
+                    {{t "Searching for \"%{term}\"..." key='searching_for' term=foundApps.term}}
+                  </div>
+                {{/if}}
+              {{/if}}
+            </div>
+          </div>
+        {{/if}}
+        {{#if android_search}}
+          <div class="form-group">
+            <div class="col-sm-10 col-sm-offset-2">
+              <strong>{{t "App to launch on Android devices" key='launch_android_app'}}</strong>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="app_name" class="col-sm-2 control-label">{{t "App" key='app'}}</label>
+            <div class="col-sm-10"> 
+              {{#if model.apps.android}}
+                <div style="margin-bottom: 10px;">
+                  <span style="white-space: nowrap; overflow: hidden;">
+                    <strong>{{model.apps.android.name}}</strong><br/>
+                    <span class="text-muted">{{model.apps.android.author_name}}</span>
+                  </span>
+                  <br/>
+                  {{#if model.apps.android.custom}}
+                    {{t "App-registered URL/scheme:" key='custom_launch'}}
+                    {{input value=model.apps.android.launch_url class="form-control" placeholder="i.e. https://www.twitter.com/"}}
+                  {{else}}
+                    {{#if model.apps.android.launch_url}}
+                      <em class="text-muted">{{t "This app will be launched by CoughDrop" key='app_can_be_launched'}}</em>
+                    {{else}}
+                      <em class="text-danger">{{t "This app won't be launched by CoughDrop" key='app_cant_be_launched'}}</em>
+                      <br/><a href="#" {{action "set_custom"}}>advanced</a>
+                    {{/if}}
+                  {{/if}}
+                </div>
+              {{else}}
+                <p class="form-control-static">{{t "No app specified" key='no_app_specified'}}</p>
+              {{/if}}
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="app_search" class="col-sm-2 control-label">{{t "Find" key='find'}}</label>
+            <div class="col-sm-10 options"> 
+              <span class="board_search_field">
+                {{input value=android_app_name class="form-control" id="app_search" placeholder="App name"}}
+              </span>
+              <button class="btn btn-default" {{action "find_app"}}>{{t "Find" key='find'}}</button>
+              {{#if foundApps.ready}}
+                {{#if foundApps.results}}
+                  <div class="row" style="margin-top: 10px; max-height: 250px; overflow: auto;">
+                    {{#each foundApps.results as |result|}}
+                      <div class="col-sm-12" {{action "pick_app" result}}>
+                        <div class="well well-sm" style="cursor: pointer; margin-bottom: 5px; line-height: 16px; white-space: nowrap; overflow: hidden;">
+                          <img src={{result.image_url}} alt="" style="width: 50px; height: 50px; margin-right: 5px; float: left;"/>
+                          {{result.name}}<br/>
+                          <span class="text-muted">
+                            {{result.author_name}}
+                            ${{result.price}}
+                          </span>
+                          <br/>
+                          {{#if result.launch_url}}
+                            <em class="text-muted">{{t "launchable" key='launchable'}}</em>
+                          {{else}}
+                            <em class="text-danger">{{t "not launchable" key='not_launchable'}}</em>
+                          {{/if}}
+                          <span style="clear: left;"></span>
+                        </div>
+                      </div>
+                    {{/each}}
+                  </div>
+                {{else}}
+                  <div style="margin-top: 10px;">
+                    {{t "No results found for \"%{term}\"" key='no_results_for' term=foundApps.term}}
+                  </div>
+                {{/if}}
+              {{else}}
+                {{#if foundApps.term}}
+                  <div style="margin-top: 10px;">
+                    {{t "Searching for \"%{term}\"..." key='searching_for' term=foundApps.term}}
+                  </div>
+                {{/if}}
+              {{/if}}
+            </div>
+          </div>
+        {{/if}}
+        {{#if web_search}}
+          <div class="form-group">
+            <div class="col-sm-10 col-sm-offset-2">
+              <strong>{{t "App to launch everywhere else" key='launch_web_app'}}</strong>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="app_url" class="col-sm-2 control-label">{{t "URL" key='url'}}</label>
+            <div class="col-sm-10"> 
+              {{input value=model.apps.web.launch_url class="form-control" id="app_url" placeholder="https://"}}
+            </div>
+          </div>
+          {{#if model.apps.web.launch_url}}
+            <div class="form-group">
+              <div class="col-sm-10 col-sm-offset-2">
+                <p class="form-control-static">
+                  <a target="_blank" href={{fixed_app_url}}>{{t "open in a browser tab" key='open_in_browser'}}</a>
+                </p>
+              </div>
+            </div>
+          {{/if}}
+        {{/if}}
+        
+      {{else}}
+        <img src="{{path 'images/talk.png'}}" style="height: 20px;"/> {{t "Button will play sound or speech" key='button_will_play'}}
+      {{/if}}
+    {{/if}}
+  {{/if}}
+  {{#unless talkAction}}
+    <div class="form-group">
+      <div class="col-sm-10">
+        <div class="checkbox">
+          <label>
+            {{input checked=link_disabled type="checkbox"}}
+            {{t "Disable this link action for now" key='disable_link_action'}}
+          </label>
+        </div>
+      </div>
+    </div>
+  {{/unless}}
+</div>
+</form>

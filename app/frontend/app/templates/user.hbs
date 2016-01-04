@@ -1,0 +1,67 @@
+<div class="row">
+  <div class="dropdown skinny_bio" style="margin-bottom: 10px;">
+    <a class='btn btn-default' href="#" data-toggle="dropdown">
+      <img src={{model.avatar_url_with_fallback}} style="max-height: 30px;"/>
+      {{ model.name }} 
+      {{#if model.subroute_name}}
+        <span class="text-muted">- {{model.subroute_name}}</span>
+      {{/if}}
+      <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel" style="width: 100%;">
+      <li role="presentation">
+        {{#link-to 'user.index' model.user_name}}{{t "summary" key='summary'}}{{/link-to}}
+      </li>
+      <li role="presentation">
+        {{#link-to 'user.stats' model.user_name (query-params start='' end='' location_id='' device_id='')}}{{t "reports" key='reports'}}{{/link-to}}
+      </li>
+        {{#if model.permissions.edit}}
+          <li role="presentation">
+            {{#link-to 'user.edit' model.user_name}}{{t "profile" key='profile'}}{{/link-to}}
+          </li>
+          <li role="presentation">
+            {{#link-to 'user.preferences' model.user_name}}{{t "preferences" key='preferences'}}{{/link-to}}
+          </li>
+          {{#if app_state.feature_flags.subscriptions}}
+            <li role="presentation">
+              {{#link-to 'user.subscription' model.user_name}}{{t "subscription" key='subscription'}}{{/link-to}}
+            </li>
+          {{/if}}
+        {{/if}}
+      <li role="presentation">
+        {{#link-to 'user.logs' model.user_name}}
+          {{t "logs &amp; messages" key='messages'}}
+          {{#if app_state.currentUser.unread_messages}}
+            <span class="label label-danger">{{app_state.currentUser.unread_messages}}</span>
+          {{/if}}
+        {{/link-to}}
+      </li>
+    </ul>
+  </div>
+  <div class="col-md-3 col-sm-12 wide_bio">
+    {{partial "user_summary"}}
+    {{#if model.permissions.supervise}}
+      <div class="btn-group-vertical" style="width: 100%;">
+        <!-- TODO: since we're not using ids these won't add 'active' class until clicked. need workaround -->
+        {{#link-to 'user.index' model.user_name class="btn btn-default"}}{{t "summary" key='summary'}}{{/link-to}}
+        {{#link-to 'user.stats' model.user_name (query-params start='' end='' location_id='' device_id='') class="btn btn-default"}}{{t "reports" key='reports'}}{{/link-to}}
+        {{#if model.permissions.edit}}
+          {{#link-to 'user.edit' model.user_name class="btn btn-default"}}{{t "profile" key='profile'}}{{/link-to}}
+          {{#link-to 'user.preferences' model.user_name class="btn btn-default"}}{{t "preferences" key='preferences'}}{{/link-to}}
+          {{#if app_state.feature_flags.subscriptions}}
+            {{#link-to 'user.subscription' model.user_name class="btn btn-default"}}{{t "subscription" key='subscription'}}{{/link-to}}
+          {{/if}}
+        {{/if}}
+        {{#link-to 'user.logs' model.user_name class="btn btn-default"}}
+          {{t "logs &amp; messages" key='messages'}}
+          {{#if app_state.currentUser.unread_messages}}
+            <span class="label label-danger">{{app_state.currentUser.unread_messages}}</span>
+          {{/if}}
+        {{/link-to}}
+      </div>
+    {{/if}}
+  </div>
+  <div class="col-md-9 col-sm-12">
+    {{outlet}}
+  </div>
+</div>

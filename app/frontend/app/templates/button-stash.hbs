@@ -1,0 +1,26 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-body">
+    <!-- TODO: this needs better visual cue when in select mode. also could use drag option -->
+    {{#if button_stashes}}
+      <p>
+      {{t "Select a stashed button from the list, then select the location on the board where you'd like it applied." key='select_stashed_button'}}
+      </p>
+      {{#with model as |board|}}
+        {{#each button_stashes as |button|}}
+          <span class="stash_button_container" {{action "pickButton" button}}>
+            {{partial "button"}}
+          </span>
+        {{/each}}
+      {{/with}}
+      <div style="clear: left;"></div>
+    {{else}}
+      <p>
+      {{t "The button stash makes it easier to reuse or move buttons across multiple boards. Buttons that you copy to your stash will appear here once there are any. To copy a button to the stash either drag it to the stash button or click the copy button in the General settings area for the button." key='stash_explanation'}}
+      <!-- TODO: pretty picture here making things a little more obvious -->
+      </p>
+    {{/if}}
+  </div>
+  <div class="modal-footer">
+    <a href="#" class="btn" {{action 'close'}}>{{t "Close" key='close'}}</a>
+  </div>
+{{/modal-dialog}}

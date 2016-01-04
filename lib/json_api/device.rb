@@ -1,0 +1,21 @@
+module JsonApi::Device
+  extend JsonApi::Json
+  
+  TYPE_KEY = 'device'
+  DEFAULT_PAGE = 25
+  MAX_PAGE = 50
+  
+  def self.build_json(device, args={})
+    json = {}
+    json['id'] = device.global_id
+    json['name'] = device.settings['name']
+    json['ip_address'] = device.settings['ip_address']
+    json['mobile'] = true if device.settings['mobile']
+    json['last_used'] = device.last_used_at.iso8601
+    json['hidden'] = true if device.hidden?
+    if args[:current_device] && args[:current_device] == device
+      json['current_device'] = true
+    end
+    json
+  end
+end

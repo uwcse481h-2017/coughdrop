@@ -1,0 +1,25 @@
+<div id="content">
+  <div class='row'>
+    <div class='col-sm-offset-4 col-sm-4'>
+      <div style="margin: 20px;">
+        <% if params['error'] %>
+          <h2>Authorization Failed</h2>
+          <p>The application requesting authorization
+           should automatically handle
+          the following message, <pre><%= params['error'] %></pre>
+          </p>
+        <% else %>
+          <h2>Authorization Success</h2>
+          <p>The application requesting authorization 
+          should automatically handle
+          processing the success code, <pre><%= params['code'] %></pre>
+          </p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  <% hash = {:type => "oauth_status", :code => params['code'], :error => params['error']} %>
+  window.parent.postMessage(<%= hash.to_json %>, '*');
+</script>

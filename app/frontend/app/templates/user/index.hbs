@@ -1,0 +1,520 @@
+<div class="skinny_bio">
+  {{partial 'user_summary'}}
+</div>
+{{#if model.permissions.view_detailed}}
+  {{#if model.permissions.delete}}
+    {{#if model.subscription.org_pending}}
+      <div class='alert alert-info'>
+        {{t "%{org} wants to sponsor this user as part of their organization. This addition must be approved before it is complete." key='confirm_pending_org' org=model.subscription.managing_org_name}}
+        <br/><br/>
+        <button class="btn btn-default" {{action 'approve_or_reject_org' true}}>{{t "Approve %{org}" org=model.subscription.managing_org_name}}</button>
+        <button class="btn btn-default" {{action 'approve_or_reject_org' false}}>{{t "Deny Access"}}</button>
+      </div>
+    {{else if model.pending}}
+      <div class='alert alert-success'>
+        {{t "Welcome to CoughDrop! Watch for an email from us in your inbox. You'll need to confirm registration within seven days of registering or your account will be disabled." key='welcome_remember_confirm'}}
+        {{#if resentConfirmation}}
+          {{t "Confirmation Email Sent!" key='confirmation_sent'}}
+        {{else}}
+          <a href="#" class="alert-link" {{action "resendConfirmation"}}>{{t "Re-Send Confirmation Email" key='re_send_confirmation'}}</a>
+        {{/if}}
+      </div>
+    {{else if model.expired}}
+      {{#if app_state.feature_flags.subscriptions}}
+        <div style='margin-bottom: 10px;'>
+          <span class="glyphicon glyphicon-info-sign" style="font-size: 20px; vertical-align: middle;"></span>
+          {{#link-to 'user.subscription' model.user_name}}
+          {{t "This user's free preview has ended. Please purchase a premium subscription." key='this_user_needs_to_subscribe'}}
+          {{/link-to}}
+        </div>
+      {{/if}}
+    {{else}}
+      {{#if blank_slate}}
+        <h2>{{t "Getting Started" key='welcome_message'}}</h2>
+        <p>
+          {{t "Welcome to CoughDrop! This is your profile summary, you can always get to it by hitting the button in the top right corner." key='welcome_message2'}}
+          {{#unless model.public}}
+            {{t "If you want others to be able to see your profile and easily find your public board then hit 'profile' on the left and make your account public." key='welcome_message_not_public'}}
+          {{/unless}}
+        </p>
+      {{else}}
+        {{#unless model.preferences.home_board.key}}
+          <h2>{{t "Getting Started" key='welcome_message'}}</h2>
+        {{/unless}}    
+      {{/if}}
+      {{#unless model.preferences.home_board.key}}
+        <p>{{t "You haven't selected a home board yet. Here's a few pre-built boards that you may like. Or you can always create your own! If you like one, just open it and hit 'Set as Home'." key='some_starting_boards'}}</p>
+        <div style="margin-bottom: 50px;">
+        {{#if model.starting_boards}}
+          <div class="row" style="margin-left: -5px; margin-right: 0;">
+          {{#each model.starting_boards as |board|}}
+            <div class="col-sm-2 col-xs-4">
+              {{partial "board-icon"}}
+            </div>
+          {{/each}}
+          </div>
+        {{/if}}
+        {{#link-to "home-boards" class="btn btn-default"}}{{t "Help me Choose" key='help_me_choose'}}{{/link-to}}
+        <button class="btn btn-default" {{action "newBoard"}}>{{t "Create a New Board" key='create_a_new_board'}}</button>
+        </div>
+      {{/unless}}
+    {{/if}}
+  {{/if}}
+  <div class="row">
+    <div class="col-sm-3 col-xs-6">
+      <div class="panel panel-default summary smaller">
+        <div class="panel-heading">
+          {{t "Current home board" key='current_home_board'}}
+        </div>
+        <div class="panel-body">
+            {{#if model.preferences.home_board.key}}
+              {{#link-to 'board' model.preferences.home_board.key}}{{model.preferences.home_board.key}}{{/link-to}}
+            {{else}}
+              {{t "None" key='none'}}
+            {{/if}}
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-3 col-xs-6">
+      <div class="panel panel-default summary smaller">
+        <div class="panel-heading">
+          {{t "Current board set" key='current_home_board'}}
+        </div>
+        <div class="panel-body">
+          {{t "board" key='board' count=model.stats.board_set}}
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-3 col-xs-6">
+      <div class="panel panel-default summary smaller">
+        <div class="panel-heading">
+          {{t "Starred boards" key='starred_boards'}}
+        </div>
+        <div class="panel-body">
+          {{t "board" key='boards' count=model.stats.starred_boards}}
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-3 col-xs-6">
+      <div class="panel panel-default summary smaller">
+        <div class="panel-heading">
+          {{t "Status" key='status'}}
+        </div>
+        <div class="panel-body">
+          {{#if model.public}}
+            {{t "public" key='public'}}
+          {{else}}
+            {{t "private" key='private'}}
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+  {{#if model.permissions.supervise}}
+    <div class="row">
+      <div class="col-sm-3 col-xs-6">
+        {{#if sync_able}}
+          <div class="panel panel-default summary smaller">
+            <div class="panel-heading">
+              {{t "Sync status" key='sync_status'}}
+            </div>
+            <div class="panel-body">
+              {{#if needs_sync}}
+                {{t "Needs update" key='needs_update'}}
+              {{else}}
+                {{t "Up-to-Date" key='up_to_date'}}
+              {{/if}}
+              {{#if persistence.online}}
+                <div class="sub_link">
+                  {{#if persistence.syncing}}
+                    <span class='link'>
+                      {{t "Syncing..." key='syncing'}}
+                    </span>
+                  {{else}}
+                    <a href="#" {{action "sync"}}>
+                      {{#if persistence.sync_failed}}
+                        {{t "Sync Failed" key='sync_failed'}}
+                      {{else}}
+                        {{#if persistence.sync_succeeded}}
+                          {{t "Sync Done!" key='sync_done'}}
+                        {{else}}
+                          {{t "Sync Now" key='sync_now'}}
+                        {{/if}}
+                      {{/if}}
+                    </a>
+                  {{/if}}
+                </div>
+              {{else}}
+                <div class="sub_link">&nbsp;</div>
+              {{/if}}
+            </div>
+          </div>
+        {{/if}}
+      </div>
+      <div class="col-sm-3 col-xs-6">
+        <div class="panel panel-default summary smaller">
+          <div class="panel-heading">
+            {{t "My device" key='my_device'}}
+          </div>
+          <div class="panel-body">
+            {{#if model.devices}}
+              {{model.current_device_name}}
+              <div class="sub_link">
+                {{#if model.multiple_devices}}
+                    <a href="#" {{action 'view_devices'}}>{{t "see all %{tally} devices" tally=model.device_count key='see_all_devices'}}</a>
+                {{/if}}
+                &nbsp;
+              </div>
+            {{else}}
+              {{t "none linked" key='none_linked'}}
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-3 col-xs-6">
+        <div class="panel panel-default summary smaller">
+          <div class="panel-heading">
+            {{t "My supervisors" key='linked_supervisors'}}
+          </div>
+          <div class="panel-body">
+                <span {{action "supervision_settings"}}>
+                  {{#if model.supervisors}}
+                    <span style="cursor: pointer;">{{model.supervisor_names}}</span>
+                  {{else}}
+                    {{t "none linked" key='none_linked'}}
+                  {{/if}}
+                </span>
+                <div class="sub_link">
+                  {{#if model.permissions.manage_supervision}}
+                    <a href="#" {{action 'add_supervisor'}}>{{t "add supervisor" key='add_supervisor'}}</a>
+                  {{/if}}
+                  &nbsp;
+                </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-3 col-xs-6">
+        {{#if model.supervisees}}
+          <div class="panel panel-default summary smaller">
+            <div class="panel-heading">
+              {{t "People I supervise" key='linked_users'}}
+            </div>
+            <div class="panel-body" {{action "supervision_settings"}}>
+              <span style="cursor: pointer;">{{model.supervisee_names}}</span>
+              <div class="sub_link">&nbsp;</div>
+            </div>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  {{/if}}
+  <div class="row">
+    <div class="col-sm-6">
+      {{#if model.permissions.edit}}
+        <dl>
+          <dt>{{t "Recent Sessions:" key='log_colon'}}</dt>
+            <dd>
+              <div style="margin-left: 20px;">
+                {{#if model.logs.loading}}
+                  <p>
+                    {{t "Loading..." key='loading'}}
+                  </p>
+                {{else if model.logs.error}}
+                  <p>
+                    {{t "Failed to load" key='failed to load'}}
+                  </p>
+                {{else if model.logs}}
+                  {{#each model.logs as |log|}}
+                    <p>
+                      <span title="{{unbound date log.started_at}}">
+                        {{date_ago log.started_at}}
+                      </span>
+                      {{#link-to 'user.log' model.user_name log.id}}
+                        {{t "button" count=log.button_count key='button_count'}}
+                      {{/link-to}}
+                      <br/>
+                      <span style="color: #888; font-size: 10px; white-space: nowrap; overflow: hidden; display: block;">{{log.summary}}</span>
+                    </p>
+                  {{/each}}
+                {{else}}
+                  <p>
+                    {{t "No sessions currently available" key='no_sessions_found'}}
+                  </p>
+                {{/if}}
+              </div>
+              <button class='btn btn-small btn-default' {{action "recordNote" "text"}}>{{t "New Note" key='text_note'}}</button>
+              {{#if app_state.feature_flags.assessments}}
+                <button class='btn btn-small btn-default' {{action "quick_assessment"}}>{{t "Quick Assessment" key='quick_assessment'}}</button>
+              {{/if}}
+            </dd>
+        </dl>
+      {{/if}}
+    </div>
+  </div>
+    <div class="row">
+      <div class="col-sm-12">
+        <h4>{{t "Available Boards:" key='available_boards_colon'}}</h4>
+        <ul class="nav nav-pills" style="margin-top: -5px; margin-bottom: 5px; margin-right: -20px;">
+          {{#if model.permissions.edit}}
+            <li role="presentation" class={{if mine_selected 'active'}}><a href="#" {{action 'set_selected' 'mine'}}>{{t "Mine" key='mine'}}</a></li>
+          {{/if}}
+          <li role="presentation" class={{if public_selected 'active'}}><a href="#" {{action 'set_selected' 'public'}}>{{t "Public" key='public'}}</a></li>
+          {{#if model.permissions.edit}}
+            <li role="presentation" class={{if private_selected 'active'}}><a href="#" {{action 'set_selected' 'private'}}>{{t "Private" key='private'}}</a></li>
+          {{/if}}
+          <li role="presentation" class={{if starred_selected 'active'}}><a href="#" {{action 'set_selected' 'starred'}}>{{t "Starred" key='starred'}}</a></li>
+          {{#if model.permissions.edit}}          
+            <li role="presentation" class={{if shared_selected 'active'}}><a href="#" {{action 'set_selected' 'shared'}}>{{t "Shared with Me" key='shared_with_me'}}</a></li>
+          {{/if}}
+          {{#if model.prior_home_boards}}
+            <li role="presentation" class={{if prior_home_selected 'active'}}><a href="#" {{action 'set_selected' 'prior_home'}}>{{t "Prior Home Boards" key='prior_home'}}</a></li>
+          {{/if}}
+        </ul>
+        {{#if mine_selected}}
+          {{#if model.my_boards.loading}}
+            {{t "Loading..." key='loading'}}
+          {{else if model.my_boards.error}}
+            {{t "Failed to load" key='failed_to_load'}}
+          {{else if model.my_boards}}
+            <form style="margin-bottom: 10px;" {{action 'nothing' on='submit'}}>
+              <div style="width: 250px;">
+              {{input type="text" value=filterString class="form-control" placeholder="Filter Results"}}
+              </div>
+            </form>
+            <div class="row">
+              {{#each my_boards_shortened as |board|}}
+                {{#if board.key}}
+                  {{#unless board.removed}}
+                    <div class="col-sm-2 col-xs-3 board_with_action">
+                      {{partial "board-icon"}}
+                      {{#if model.permissions.edit}}
+                        <button class="board_action" {{action 'remove_board' 'delete' board}}>
+                          <span title={{t "delete" key='delete'}}><span class='glyphicon glyphicon-trash'></span></span>
+                        </button>
+                      {{/if}}
+                    </div>
+                  {{/unless}}
+                {{/if}}
+              {{/each}}
+              {{#unless show_all_my_boards}}
+                {{#unless filterString}}
+                  <div class="col-sm-12">
+                    <a href="#" {{action "show_more_my_boards"}}>show more</a>
+                  </div>
+                {{/unless}}
+              {{/unless}}
+            </div>
+          {{else}}
+            {{t "None found" key='none_found'}}
+          {{/if}}
+        {{else if public_selected}}
+          {{#if model.public_boards.loading}}
+            {{t "Loading..." key='loading'}}
+          {{else if model.public_boards.error}}
+            {{t "Failed to load" key='failed_to_load'}}
+          {{else if model.public_boards}}
+            <form style="margin-bottom: 10px;" {{action 'nothing' on='submit'}}>
+              <div style="width: 250px;">
+              {{input type="text" value=filterString class="form-control" placeholder="Filter Results"}}
+              </div>
+            </form>
+            <div class="row">
+              {{#each public_boards_shortened as |board|}}
+                {{#if board.key}}
+                  {{#unless board.removed}}
+                    <div class="col-sm-2 col-xs-3 board_with_action">
+                      {{partial "board-icon"}}
+                      {{#if model.permissions.edit}}
+                        <button class="board_action" {{action 'remove_board' 'delete' board}}>
+                          <span title={{t "delete" key='delete'}}><span class='glyphicon glyphicon-trash'></span></span>
+                        </button>
+                      {{/if}}
+                    </div>
+                  {{/unless}}
+                {{/if}}
+              {{/each}}
+              {{#unless show_all_public_boards}}
+                {{#unless filterString}}
+                  <div class="col-sm-12">
+                    <a href="#" {{action "show_more_public_boards"}}>show more</a>
+                  </div>
+                {{/unless}}
+              {{/unless}}
+            </div>
+          {{else}}
+            {{t "None found" key='none_found'}}
+          {{/if}}
+        {{else if private_selected}}
+          {{#if model.private_boards.loading}}
+            {{t "Loading..." key='loading'}}
+          {{else if model.private_boards.error}}
+            {{t "Failed to load" key='failed_to_load'}}
+          {{else if model.private_boards}}
+            <form style="margin-bottom: 10px;" {{action 'nothing' on='submit'}}>
+              <div style="width: 250px;">
+              {{input type="text" value=filterString class="form-control" placeholder="Filter Results"}}
+              </div>
+            </form>
+            <div class="row">
+              {{#each private_boards_shortened as |board|}}
+                {{#if board.key}}
+                  {{#unless board.removed}}
+                    <div class=" col-sm-2 col-xs-3 board_with_action">
+                      {{partial "board-icon"}}
+                      {{#if model.permissions.edit}}
+                        <button class="board_action" {{action 'remove_board' 'delete' board}}>
+                          <span title={{t "delete" key='delete'}}><span class='glyphicon glyphicon-trash'></span></span>
+                        </button>
+                      {{/if}}
+                    </div>
+                  {{/unless}}
+                {{/if}}
+              {{/each}}
+              {{#unless show_all_private_boards}}
+                {{#unless filterString}}
+                  <div class="col-sm-12">
+                    <a href="#" {{action "show_more_private_boards"}}>show more</a>
+                  </div>
+                {{/unless}}
+              {{/unless}}
+            </div>
+          {{else}}
+            {{t "None found" key='none_found'}}
+          {{/if}}
+        {{else if starred_selected}}
+          {{#if model.starred_boards.loading}}
+            {{t "Loading..." key='loading'}}
+          {{else if model.starred_boards.error}}
+            {{t "Failed to load" key='failed_to_load'}}
+          {{else if model.starred_boards}}
+            <form style="margin-bottom: 10px;" {{action 'nothing' on='submit'}}>
+              <div style="width: 250px;">
+              {{input type="text" value=filterString class="form-control" placeholder="Filter Results"}}
+              </div>
+            </form>
+            <div class="row">
+              {{#each starred_boards_shortened as |board|}}
+                {{#if board.key}}
+                  {{#unless board.removed}}
+                    <div class="col-sm-2 col-xs-3 board_with_action">
+                      {{partial "board-icon"}}
+                      {{#if model.permissions.edit}}
+                        <button class="board_action" {{action 'remove_board' 'unstar' board}}>
+                          <span title={{t "unstar" key='unstar'}}><span class='glyphicon glyphicon-star-empty'></span></span>
+                        </button>
+                      {{/if}}
+                    </div>
+                  {{/unless}}
+                {{/if}}
+              {{/each}}
+              {{#unless show_all_starred_boards}}
+                {{#unless filterString}}
+                  <div class="col-sm-12">
+                    <a href="#" {{action "show_more_starred_boards"}}>show more</a>
+                  </div>
+                {{/unless}}
+              {{/unless}}
+            </div>
+          {{else}}
+            {{t "None found" key='none_found'}}
+          {{/if}}
+        {{else if shared_selected}}
+          {{#if model.shared_boards.loading}}
+            {{t "Loading..." key='loading'}}
+          {{else if model.shared_boards.error}}
+            {{t "Failed to load" key='failed_to_load'}}
+          {{else if model.shared_boards}}
+            <form style="margin-bottom: 10px;" {{action 'nothing' on='submit'}}>
+              <div style="width: 250px;">
+              {{input type="text" value=filterString class="form-control" placeholder="Filter Results"}}
+              </div>
+            </form>
+            <div class="row">
+              {{#each shared_boards_shortened as |board|}}
+                {{#if board.key}}
+                  {{#unless board.removed}}
+                    <div class="col-sm-2 col-xs-3 board_with_action">
+                      {{partial "board-icon"}}
+                      {{#if model.permissions.edit}}
+                        <button class="board_action" {{action 'remove_board' 'unlink' board}}>
+                          <span title={{t "unlink" key='unlink'}}><span class='glyphicon glyphicon-remove'></span></span>
+                        </button>
+                      {{/if}}
+                    </div>
+                  {{/unless}}
+                {{/if}}
+              {{/each}}
+              {{#unless show_all_shared_boards}}
+                {{#unless filterString}}
+                  <div class="col-sm-12">
+                    <a href="#" {{action "show_more_shared_boards"}}>show more</a>
+                  </div>
+                {{/unless}}
+              {{/unless}}
+            </div>
+          {{else}}
+            {{t "None found" key='none_found'}}
+          {{/if}}
+        {{else if prior_home_selected}}
+          <ul class="list-group" style="max-width: 350px;">
+            {{#each shortened_list_of_prior_home_boards as |board|}}
+              <li class="list-group-item">
+                {{#link-to "board" board.key}}{{board.key}}{{/link-to}}
+              </li>
+            {{/each}}
+          </ul>
+          {{#unless show_all_prior_home_boards}}
+            <a href="#" {{action "show_more_prior_home_boards"}}>show more</a>
+          {{/unless}}
+        {{/if}}
+      </div>
+    </div>
+  {{#if model.permissions.support_actions}}
+    <div class="row" style="margin-top: 30px;">
+      <div class="col-sm-12">
+        <h4>{{t "Support Actions" key='support_actions'}}</h4>
+        {{#if password}}
+          <div>
+            {{#unless password.pw}}
+              {{t "Are you sure you want to reset this user's password? They will receive an email notifying them of the reset." key='confirm_reset'}}<br/>
+              <button class='btn btn-default' {{action 'reset_password' true}}>{{t "Reset Password" key='reset_password'}}</button>
+              <button class='btn btn-default' {{action 'reset_password' false}}>{{t "Cancel" key='cancel'}}</button>
+            {{/unless}}
+            {{#if password.loading}}
+              {{t "Setting password to <strong>%{pw}</strong>..." key='setting_password_to' pw=password.pw}}
+            {{else if password.error}}
+              {{t "Password reset failed" key='password_reset_failed'}}
+            {{else if password.pw}}
+              {{t "Password reset to <strong>%{pw}</strong>!" key='password_was_reset' pw=password.pw}}
+            {{/if}}
+          </div>
+        {{else}}
+          <a href="#" {{action 'reset_password'}} class="btn btn-default">{{t "Reset Password" key='reset_password'}}</a>
+        {{/if}}
+        {{#if model.permissions.admin_support_actions}}
+          <br/><br/>
+          {{t "Subscription:" key='subscription_colon'}}
+          {{subscription.subscription_plan_description}}<br/>
+          {{#if subscription_settings.type}}
+            <div>
+              {{#if subscription_settings.loading}}
+                {{t "Updating subscription..." key='updating_subscription'}}
+              {{else if subscription_settings.error}}
+                {{subscription_settings.error}}
+              {{else}}
+                {{t "Are you sure you want to set this user as a %{type}?" type=subscription_settings.type key='confirm_subscription_set'}}<br/>
+                <button class='btn btn-default' {{action 'set_subscription' 'confirm'}}>{{t "Update Subscription" key='update_subscription'}}</button>
+                <button class='btn btn-default' {{action 'set_subscription' 'cancel'}}>{{t "Cancel" key='cancel'}}</button>
+              {{/if}}
+            </div>
+          {{else}}
+            <a href="#" {{action 'set_subscription' 'eval'}} class="btn btn-default">{{t "Set as Eval Account" key='set_as_eval'}}</a>
+            <a href="#" {{action 'set_subscription' 'never_expires'}} class="btn btn-default">{{t "Set as Free Forever" key='set_as_free_forever'}}</a><br/>
+          {{/if}}
+        {{/if}}
+      </div>
+    </div>
+  {{/if}}
+{{else}}
+  {{t "This account is private. Nothing to see here, move along." key='private_account'}}
+{{/if}}

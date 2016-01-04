@@ -1,0 +1,14 @@
+This is a notice that the user account <b><%= @user.user_name %></b> needs updated
+subscription information. We tried to auto-resume the subscription settings you had
+on hand before, but for some reason it failed.<br/><br/>
+
+To address this problem please 
+<a href="<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/subscription">update your subscription settings in CoughDrop</a>.<br/><br/>
+
+If you need help or think this message was sent in error , please let us know
+and we'll help get to the bottom of things. Just 
+<a href="https://coughdrop.zendesk.com">access our support site</a>
+to make a request.<br/><br/>
+
+Thanks!<br/>
+-The CoughDrop Team

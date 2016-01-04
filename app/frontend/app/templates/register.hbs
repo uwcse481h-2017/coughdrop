@@ -1,0 +1,99 @@
+<div class="row">
+  <div class="col-sm-6 col-sm-offset-3">
+    {{#if stashes.enabled}}
+      <div class='col-sm-8 col-sm-offset-4'>
+        <h2>{{t "Join CoughDrop" key='join_coughdrop'}}</h2>
+      </div>
+      <form class="form-horizontal" {{action "saveProfile" on="submit"}}>
+      <div class="form-group">
+        <label for="name" class="col-sm-4 control-label">{{t "Name" key='name'}}</label>
+        <div class="col-sm-8">
+          {{input value=model.name class="form-control" id="name" placeholder="Full Name"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="user_name" class="col-sm-4 control-label">{{t "Username" key='username'}}</label>
+        <div class="col-sm-8">
+          {{input value=model.user_name class="form-control" id="user_name" placeholder="unique_name (optional)"}}
+          {{#if user.user_name_check.checking}}
+          {{else if user.user_name_check.exists}}
+            {{t '"%{user_name}" already exists' user_name=user.user_name}}
+          {{else if noName}}
+            {{t "name or username is required" key='name_or_username_required'}}
+          {{/if}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email" class="col-sm-4 control-label">{{t "Email" key='email'}}</label>
+        <div class="col-sm-8">
+          {{input value=model.email class="form-control" id="email" placeholder=""}}
+          {{#if badEmail}}
+            {{t "email required" key='email_required'}}
+          {{/if}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="registration_type" class="col-sm-4 control-label">{{t "Type" key='type'}}</label>
+        <div class="col-sm-8">
+          {{bound-select select_class="form-control" select_id="registration_type" content=registration_types selection=model.preferences.registration_type action=(action (mut model.preferences.registration_type)) }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="public" class="col-sm-4 control-label">{{t "Public" key='public'}}</label>
+        <div class="col-sm-8">
+          <div class="checkbox">
+            <label>
+              {{input type="checkbox" checked=model.public id="public"}}
+              {{t "Anyone can see my profile" key='anyone_can_see_profile'}}
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-4 control-label">{{t "Password" key='password'}}</label>
+        <div class="col-sm-8">
+            {{input type="password" value=model.password class="form-control" id="password" placeholder="at least 6 characters"}}
+            &nbsp;
+            {{input type="password" value=model.password2 class="form-control" id="password2" placeholder=""}}
+            {{#if shortPassword}}
+              {{t "password must be at least 6 characters" key='min_password'}}<br/>
+            {{/if}}
+            {{#if passwordMismatch}}
+              {{t "passwords don't match" key='password_mismatch'}}
+            {{/if}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="description" class="col-sm-4 control-label">{{t "One-Liner" key='one_liner'}}</label>
+        <div class="col-sm-8">
+          {{input value=model.description class="form-control" id="description" placeholder="a short bio"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="url" class="col-sm-4 control-label">{{t "URL" key='url'}}</label>
+        <div class="col-sm-8">
+          {{input value=model.details_url class="form-control" id="url" placeholder="http://"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="location" class="col-sm-4 control-label">{{t "Location" key='location'}}</label>
+        <div class="col-sm-8">
+          {{input value=model.location class="form-control" id="location" placeholder="City, State, Whatever"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-4 col-sm-8">
+          <p><label style="font-weight: normal;">
+            {{input type="checkbox" checked=model.terms_agree}}
+            By registering or using the product, you are agreeing that you have read and understood the <a href="/terms">Terms of Use and License Agreement</a>, and are capable of binding to a legal contract.
+          </label></p>
+          <button type="submit" class="btn btn-primary">{{t "Sign Up" key='sign_up'}}</button>
+        </div>
+      </div>    
+      </form>
+    {{else}}
+      <h2>Can't Register</h2>
+      {{partial "bad-privacy-settings"}}
+    {{/if}}
+  </div>
+</div>

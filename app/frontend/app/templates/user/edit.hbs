@@ -1,0 +1,108 @@
+<h2>{{t "Profile for %{term}" key='profile_for' term=model.user_name}}</h2>
+<form class="form-horizontal" {{action "saveProfile" on="submit"}}>
+<div class="form-group">
+  <label for="name" class="col-sm-3 control-label">{{t "Name" key='name'}}</label>
+  <div class="col-sm-5">
+    {{input value=model.name class="form-control" id="name" placeholder="Full Name"}}
+  </div>
+</div>
+<div class="form-group">
+  <label for="user_name" class="col-sm-3 control-label">{{t "Username" key='username'}}</label>
+  <div class="col-sm-5">
+    <label class="control-label">
+      {{ model.user_name }}
+    </label>
+  </div>
+</div>
+<div class="form-group">
+  <label for="email" class="col-sm-3 control-label">{{t "Email" key='email'}}</label>
+  <div class="col-sm-5">
+    {{input value=model.email class="form-control" id="email" placeholder=""}}
+  </div>
+</div>
+<div class="form-group">
+  <label for="registration_type" class="col-sm-3 control-label">{{t "Login is for" key='login_is_for'}}</label>
+  <div class="col-sm-5">
+    {{bound-select select_class="form-control" select_id="registration_type" content=registration_types selection=model.preferences.registration_type action=(action (mut model.preferences.registration_type)) }}
+  </div>
+</div>
+<div class="form-group">
+  <label for="voice_pitch" class="col-sm-3 control-label">{{t "Home Board" key='home_board'}}</label>
+  <div class="col-sm-5">
+    <p class="form-control-static">
+      {{#if model.preferences.home_board.key}}
+        {{#link-to 'board' model.preferences.home_board.key}}{{model.preferences.home_board.key}}{{/link-to}}
+      {{else}}
+        {{t "None selected. Find the home board you would like and pick it!" key='none_selected_find_one'}}
+      {{/if}}
+    </p>
+  </div>
+</div>
+<div class="form-group">
+  <label for="public" class="col-sm-3 control-label">{{t "Public" key='public'}}</label>
+  <div class="col-sm-5">
+    <div class="checkbox">
+      <label>
+        {{input type="checkbox" checked=model.public id="public"}}
+        {{t "Anyone can see my profile" key='anyone_can_see_profile'}}
+        <br/><em>{{t "(your email address will stay private)" key='email_stays_private'}}</em>
+      </label>
+    </div>
+  </div>
+</div>
+{{#unless change_password}}
+  <div class="form-group">
+    <label class="col-sm-3 control-label">{{t "Password" key='password'}}</label>
+    <div class="col-sm-5">
+      <p class="form-control-static">
+        <a href="#" {{action "enable_change_password"}}>change password</a>
+      </p>
+    </div>
+  </div>
+{{else}}
+  <div class="form-group">
+    <label class="col-sm-3 control-label">{{t "Password" key='password'}}</label>
+    <div class="col-sm-5">
+      {{input type="password" value=model.old_password class="form-control" id="old_password" placeholder="current password"}}
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-sm-3 control-label"></label>
+    <div class="col-sm-5">
+      {{input type="password" value=model.password class="form-control" id="password" placeholder="new password"}}
+    </div>
+  </div>
+{{/unless}}
+<div class="form-group">
+  <label for="description" class="col-sm-3 control-label">{{t "One-Liner" key='one_liner'}}</label>
+  <div class="col-sm-5">
+    {{input value=model.description class="form-control" id="description" placeholder="a short bio"}}
+  </div>
+</div>
+<div class="form-group">
+  <label for="url" class="col-sm-3 control-label">{{t "URL" key='url'}}</label>
+  <div class="col-sm-5">
+    {{input value=model.details_url class="form-control" id="url" placeholder="http://"}}
+  </div>
+</div>
+<div class="form-group">
+  <label for="location" class="col-sm-3 control-label">{{t "Location" key='location'}}</label>
+  <div class="col-sm-5">
+    {{input value=model.location class="form-control" id="location" placeholder="City, State, Whatever"}}
+  </div>
+</div>
+<div class="form-group">
+  <label for="location" class="col-sm-3 control-label">{{t "Avatar" key='avatar'}}</label>
+  <div class="col-sm-5">
+    <img src={{model.avatar_url_with_fallback}} style="max-height: 30px;"/> 
+    <a href="http://www.gravatar.com">{{t "Change your avatar at Gravatar.com" key='change_at_gravatar'}}</a>
+    <!-- TODO: include better not that it's based on email address -->
+  </div>
+</div>
+<div class="form-group">
+  <div class="col-sm-offset-3 col-sm-4">
+    <button type="submit" class="btn btn-primary">{{t "Save Profile" key='save_profile'}}</button>
+    <button type="button" class="btn btn-default" {{action "cancelSave"}}>{{t "Cancel" key='cancel'}}</button>
+  </div>
+</div>    
+</form>

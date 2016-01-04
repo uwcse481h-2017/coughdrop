@@ -1,0 +1,8 @@
+<%= @author.settings['name'] %> just posted a message to the log of <%= @target.settings['name'] %>
+
+Message: 
+<%= (@log.data['note'] && @log.data['note']['text']) || "no message" %>
+<%= JsonApi::Json.current_host %>/<%= @target.user_name %>/logs?type=note
+
+Thanks!
+-The CoughDrop Team

@@ -1,0 +1,146 @@
+{{#if model.permissions.edit}}
+  <h3>{{t "Managers" key='manager'}}</h3>
+  {{#if managers.data}}
+    <table class="table table-hover" style="width: 400px;">
+      <tbody>
+        {{#each managers.data as |manager|}}
+          <tr>
+            <td>
+              {{#link-to 'user' manager.user_name}}
+                <img src={{manager.avatar_url}} style="height: 30px;"/>
+                {{manager.user_name}}
+              {{/link-to}}
+            </td>
+            <td>
+              {{#if manager.org_manager}}
+                {{t "manager" key='manager'}}
+              {{else if manager.org_assistant}}
+                {{t "assistant" key='assistant'}}
+              {{/if}}
+            </td>
+            <td>
+              <a href='#' {{action "management_action" 'remove_manager' manager.id}} class="glyphicon glyphicon-remove"><span class='text-hide'>remove</span></a>
+            </td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else if managers.loading}}
+    {{t "Loading managers..." key='loading_managers'}}
+  {{else}}
+    {{t "None found" key='none_found'}}
+  {{/if}}
+  <div>
+    {{input value=manager_user_name placeholder="user name" class="form-control inline inline-masquerade input-sm"}}
+    <button class="btn btn-default btn-sm" {{action "management_action" 'add_manager'}}>{{t "Add Manager" key='add_manager'}}</button>
+    <button class="btn btn-default btn-sm" {{action "management_action" 'add_assistant'}}>{{t "Add Assistant" key='add_assistant'}}</button>
+  </div>
+  
+  <h3>{{t "Communicators" key='communicators'}}</h3>
+  {{#if users.data}}
+    <table class="table table-hover" style="width: 400px;">
+      <tbody>
+        {{#each users.data as |user|}}
+          <tr>
+            <td>
+              {{#link-to 'user' user.user_name}}
+                <img src={{user.avatar_url}} style="height: 30px;"/>
+                {{user.user_name}}
+              {{/link-to}}
+              {{#if user.org_pending}}
+                <span style="vertical-align: middle;" class="text-muted">{{t "(pending)" key='pending'}}</span>
+              {{/if}}
+            </td>
+            <td>
+              <a href='#' {{action "management_action" 'remove_user' user.user_name}} class="glyphicon glyphicon-remove"><span class='text-hide'>remove</span></a>
+            </td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{#if more_users}}
+      <p>
+        {{#link-to 'admin.reports' (query-params current_report='all_users')}}
+          {{t "See all users" key='see_all_users'}}
+        {{/link-to}}
+      </p>
+    {{/if}}
+  {{else if users.loading}}
+    {{t "Loading users..." key='loading_users'}}
+  {{else}}
+    {{t "None found" key='none_found'}}
+  {{/if}}
+  <p>
+    {{model.used_licenses}} {{t "out of" key='out_of' }} {{model.total_licenses}} {{t "allotted licenses used" key='licenses_used'}}
+  </p>
+  {{#if model.licenses_available}}
+    <div>
+      {{input value=user_user_name placeholder="user name" class="form-control inline inline-masquerade input-sm"}}
+      <button class="btn btn-default btn-sm" {{action "management_action" 'add_user'}}>{{t "Add User" key='add_user'}}</button>
+    </div>
+  {{/if}}
+
+  {{#if model.admin}}
+    {{#if model.permissions.manage}}
+      <h3>{{t "Organizations" key='organizations'}}</h3>
+      {{#if orgs.data}}
+        <table class="table table-hover" style="width: 400px;">
+          <tbody>
+            {{#each orgs.data as |org|}}
+              <tr>
+                <td>
+                  {{#link-to 'organization' org.id}}
+                    <span class='glyphicon glyphicon-paperclip' style="font-size: 25px; vertical-align: middle;"></span>
+                    {{org.name}}
+                  {{/link-to}}
+                </td>
+                <td>
+                  {{#unless org.admin}}
+                    <a href='#' {{action "remove_org" org}} class="glyphicon glyphicon-remove"><span class='text-hide'>remove</span></a>
+                  {{/unless}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      {{else if orgs.loading}}
+        {{t "Loading organizations..." key='loading_orgs'}}
+      {{else}}
+        {{t "None found" key='none_found'}}
+      {{/if}}
+      <div>
+        {{input value=org_org_name placeholder="org name" class="form-control inline inline-masquerade input-sm"}}
+        {{input value=org_user_name placeholder="admin user name" class="form-control inline inline-masquerade input-sm"}}
+        <button class="btn btn-default btn-sm" {{action "add_org"}}>{{t "Add Organization" key='add_org'}}</button>
+      </div>
+    {{/if}}
+  {{/if}}
+  {{#if model.permissions.manage}}
+    <h3>{{t "Recent Sessions" key='recent_sessions'}}</h3>
+    {{#if logs.data}}
+      <ul class="list-unstyled">
+      {{#each logs.data as |log|}}
+        <li>
+          <p>
+            {{#link-to 'user' log.user.user_name}}{{log.user.user_name}}{{/link-to}} - 
+            <span title="{{unbound date log.started_at}}">
+              {{date_ago log.started_at}}
+            </span>
+            {{#link-to 'user.log' log.user.user_name log.id}}
+              {{t "button" count=log.button_count key='button_count'}}
+            {{/link-to}}
+            <br/>
+            <span style="color: #888; font-size: 10px; white-space: nowrap; overflow: hidden; display: block;">{{log.summary}}</span>
+          </p>
+        </li>
+      {{/each}}
+      </ul>
+    {{else if logs.loading}}
+      {{t "Loading sessions..." key='loading_sessions'}}          
+    {{else}}
+      {{t "None found" key='none_found'}}
+    {{/if}}
+  {{/if}}
+{{else}}
+  {{t "No information available" key='no_information_available'}}
+{{/if}}

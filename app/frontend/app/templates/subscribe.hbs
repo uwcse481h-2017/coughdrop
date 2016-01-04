@@ -1,0 +1,23 @@
+{{#modal-dialog opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <h3>{{t "Subscription" key='subscription'}}</h3>
+  </div>
+  <div class="modal-body" id="button_settings">
+    {{#if model.user.really_expired}}
+      <p>
+        {{t "Your CoughDrop trial period has expired. Please update your subscription settings to continue using CoughDrop." key='welcome_fill_out_subscription'}}
+      </p>
+    {{else}}
+      <p>
+        {{t "Welcome to CoughDrop, we're excited you're here! Before you get started, please take a minute to select a subscription plan that works for you." key='welcome_fill_out_subscription'}}
+      </p>
+    {{/if}}
+    {{#if subscription.finalizing_purchase}}
+      <h4>{{t "Confirming subscription update..." key='finalizing_subscription'}}</h4>
+    {{else if error}}
+      <h4 class='text-danger'>{{error}}</h4>
+    {{else}}
+      {{subscription-form user=model.user subscription=model.subscription trial_option=true subscription_skip='subscription_skip' subscription_error='subscription_error' subscription_success='subscription_success'}}
+    {{/if}}
+  </div>
+{{/modal-dialog}}

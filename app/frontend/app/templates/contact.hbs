@@ -1,0 +1,62 @@
+<div class="row">
+  <div class="col-sm-10 col-sm-offset-2">
+    <h2>{{t "Contact CoughDrop" key='contact_us'}}</h2>
+    <div class="row" style="margin-bottom: 30px;">
+    <div class='col-sm-9'>
+      <span class='glyphicon glyphicon-comment' style="float: left; font-size: 30px; margin-right: 10px;"></span>
+      <p>
+        {{t "Questions? Suggestions? Haikus? We'd love to hear any of them from you! Our goal is to build a resource that supports communicators and the teams around them so we can help people's voices be heard. We can't do that nearly as well without help and participation from you, so please send us a line!" key='contact_us_intro'}}
+      </p>
+    </div>
+    </div>
+    <form class="form-horizontal" {{action "submit_message" on="submit"}}>
+      <div class="form-group">
+        <label for="name" class="col-sm-3 control-label">{{t "Name" key='name'}}</label>
+        <div class="col-sm-5">
+          {{input value=name class="form-control" id="name" placeholder="Your Name"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email" class="col-sm-3 control-label">{{t "Email" key='email'}}</label>
+        <div class="col-sm-5">
+          {{input value=email class="form-control" id="email" placeholder="you@example.com"}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="recipient" class="col-sm-3 control-label">{{t "Recipient" key='recipient'}}</label>
+        <div class="col-sm-5">
+          {{bound-select select_class="form-control" select_id="recipient" content=recipient_list selection=recipient action=(action (mut recipient)) }}
+        </div>
+      </div>
+      {{#if support_recipient}}
+        {{#unless app_state.no_linky}}
+          <div class="form-group">
+            <div class="col-sm-5 col-sm-offset-3">
+              <p>
+                {{t "Before filing a ticket, please <a href='https://coughdrop.zendesk.com'>check our support site</a> for common questions." key='support_through_site'}}
+              </p>
+            </div>
+          </div>
+        {{/unless}}
+      {{/if}}
+      <div class="form-group">
+        <label for="subject" class="col-sm-3 control-label">{{t "Subject" key='subject'}}</label>
+        <div class="col-sm-5">
+          {{input value=subject class="form-control" id="subject" placeholder=""}}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="message" class="col-sm-3 control-label">{{t "Message" key='message'}}</label>
+        <div class="col-sm-5">
+          {{textarea value=message class="form-control" id="message" placeholder="" rows=4}}
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-3 col-sm-5">
+          <button disabled={{disabled}} type="submit" class="btn btn-primary">{{t "Send Message" key='send_message'}}</button>
+          <button disabled={{disabled}} type="button" class="btn btn-default" {{action "reset"}}>{{t "Clear" key='clear'}}</button>
+        </div>
+      </div>    
+    </form>
+  </div>
+</div>

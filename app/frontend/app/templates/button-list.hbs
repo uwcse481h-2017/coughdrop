@@ -1,0 +1,16 @@
+{{#each button_list as |button|}}
+  <div class="history_button">
+    {{#if button.image}}
+      <img src={{button.image}} onerror="button_broken_image(this);"/>
+    {{else}}
+      <img src="https://s3.amazonaws.com/opensymbols/libraries/mulberry/paper.svg"/>
+    {{/if}}
+    {{#if button.sound}}
+      <audio style="display: none;" preload="auto" src={{button.sound}}></audio>
+    {{/if}}
+    <div>
+      {{ button.label }}
+    </div>
+  </div>
+{{/each}}
+<div style="clear: left;"></div>

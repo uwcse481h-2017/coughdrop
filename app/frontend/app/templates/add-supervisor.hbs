@@ -1,0 +1,82 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>{{t "Add Supervisor" key='add_supervisor'}}</h3>
+  </div>
+  <div class="modal-body">
+    <p>{{t "Supervisors can be linked to a user's account. Supervisors have full access to the user's account, they can change their home board, see and edit their private boards, see reports on the user, make log notes, etc. It can be valuable for therapists, parents, etc. to be added as supervisors to an individual's account, but remember that supervisors have full account access, so be aware of who you add as supervisors." key='supverisor_intro'}}</p>
+    <form class="form-horizontal" {{action "add" on="submit"}}>
+      <div class="form-group">
+        <div class="col-sm-12">
+          <div class="btn-group btn-group-lg" role="group" aria-label="user type">
+            <button type="button" class={{if existing_user "btn btn-primary" "btn btn-default"}} {{action "set_user_type" 'existing'}}>{{t "Add an Existing User" key='add_existing_user'}}</button>
+            <button type="button" class={{if new_user "btn btn-primary" "btn btn-default"}} {{action "set_user_type" 'new'}}>{{t "Add a New User" key='add_new_user'}}</button>
+          </div>
+        </div>
+      </div>
+      {{#if existing_user}}
+        <div class="form-group">
+          <label for="add_supervisee_key" class="col-sm-3 control-label">{{t "Supervisor" key='supervisor'}}</label>
+          <div class="col-sm-6">
+            {{input value=supervisor_key class="form-control" id="add_supervisee_key" placeholder="User name"}}
+          </div>
+        </div>
+      {{else}}
+        <div class="form-group">
+          <label for="supervisor_name" class="col-sm-3 control-label">{{t "Supervisor" key='supervisor'}}</label>
+          <div class="col-sm-6">
+            {{input value=model.supervisor.name class="form-control" id="supervisor_name" placeholder="Full name"}}
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-6 col-sm-offset-3">
+            {{input value=model.supervisor.user_name class="form-control" placeholder="User name"}}
+            {{#if model.supervisor.user_name_check.checking}}
+            {{else if model.supervisor.user_name_check.exists}}
+              <span class='text-danger'>{{t '"%{user_name}" already exists' user_name=model.supervisor.user_name}}</span>
+            {{/if}}
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-6 col-sm-offset-3">
+            {{input value=model.supervisor.email class="form-control" placeholder="Email address"}}
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-6 col-sm-offset-3">
+            {{input type='password' value=model.supervisor.password class="form-control" placeholder="Password"}}
+          </div>
+        </div>
+      {{/if}}
+      <div class="form-group" style="margin-top: -15px;">
+        <div class="col-sm-8 col-sm-offset-3">
+          <div class="checkbox">
+            <label>
+              {{input checked=edit_permission type="checkbox"}}
+              {{t "this supervisor can modify boards for me" key='edit_permission'}}
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-9 col-sm-offset-3">
+          <button type="submit" class='btn btn-primary' disabled={{linking}}>
+            {{#if linking}}
+              {{t "Adding Supervisor..." key='adding_supervisor'}}
+            {{else}}
+              {{#if error}}
+                {{t "Adding Supervisor Failed" key='adding_supervisor_failed'}}
+              {{else}}
+                {{t "Add Supervisor" key='add_supervisor'}}
+              {{/if}}
+            {{/if}}
+          </button>
+          <a href="#" class="btn btn-default" {{action 'close'}}>{{t "Cancel" key='cancel'}}</a>
+          {{#if error}}
+            <p class="text-danger">{{error}}</p>
+          {{/if}}
+        </div>
+      </div>
+    </form>
+  </div>    
+{{/modal-dialog}}

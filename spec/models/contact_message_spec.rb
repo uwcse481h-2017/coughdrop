@@ -1,0 +1,139 @@
+require 'spec_helper'
+
+describe ContactMessage, :type => :model do
+  it "should process parameters" do
+    m = ContactMessage.process_new({
+      'name' => 'Bob Jones',
+      'email' => 'bob@example.com',
+      'subject' => 'ok',
+      'recipient' => 'nobody',
+      'message' => 'asdf',
+      'hat' => 'asdf'
+    })
+    expect(m).not_to eq(nil)
+    expect(m.errored?).to eq(false)
+    expect(m.settings['email']).to eq('bob@example.com')
+    expect(m.settings['name']).to eq('Bob Jones')
+    expect(m.settings['subject']).to eq('ok')
+    expect(m.settings['recipient']).to eq('nobody')
+    expect(m.settings['message']).to eq('asdf')
+    expect(m.settings['hat']).to eq(nil)
+    
+    m = ContactMessage.process_new({})
+    expect(m).not_to eq(nil)
+    expect(m.errored?).to eq(false)
+    expect(m.settings['email']).to eq(nil)
+  end
+  
+  it "should schedule a message delivery" do
+    expect(AdminMailer).to receive(:schedule_delivery).with(:message_sent, /\d+_\d+/).and_return(true)
+    m = ContactMessage.process_new({
+      'name' => 'Bob Jones',
+      'email' => 'bob@example.com',
+      'subject' => 'ok',
+      'recipient' => 'nobody',
+      'message' => 'asdf',
+      'hat' => 'asdf'
+    })
+  end
+  
+  it "should schedule a message delivery for support messages when remote support not configured" do
+    orig = ENV['ZENDESK_DOMAIN']
+    ENV['ZENDESK_DOMAIN'] = nil
+
+    expect(AdminMailer).to receive(:schedule_delivery).with(:message_sent, /\d+_\d+/).and_return(true)
+    m = ContactMessage.process_new({
+      'message' => 'asdf', 
+      'email' => 'bob@example.com',
+      'recipient' => 'support'
+    })
+    expect(m.errored?).to eq(false)
+
+    ENV['ZENDESK_DOMAIN'] = orig
+  end
+  
+  it "should error creating a support message with no email" do
+    orig = ENV['ZENDESK_DOMAIN']
+    ENV['ZENDESK_DOMAIN'] = 'asdf'
+
+    m = ContactMessage.process_new({
+      'message' => 'asdf', 
+      'recipient' => 'support'
+    })
+    expect(m.errored?).to eq(true)
+    expect(m.processing_errors).to eq(['Email required for support tickets'])
+
+    ENV['ZENDESK_DOMAIN'] = orig
+  end
+  
+  it "should schedule a remote delivery for support messages if remote support configured" do
+    orig = ENV['ZENDESK_DOMAIN']
+    ENV['ZENDESK_DOMAIN'] = 'asdf'
+
+    m = ContactMessage.process_new({
+      'message' => 'asdf', 
+      'email' => 'asdf@example.com',
+      'recipient' => 'support'
+    })
+    expect(m.errored?).to eq(false)
+    expect(Worker.scheduled?(ContactMessage, :perform_action, {'id' => m.id, 'method' => 'deliver_remotely', 'arguments' => []})).to eq(true)
+
+    ENV['ZENDESK_DOMAIN'] = orig
+  end
+  
+  it "should try to deliver a remote message if configured" do
+    orig_d = ENV['ZENDESK_DOMAIN']
+    orig_u = ENV['ZENDESK_USER']
+    orig_t = ENV['ZENDESK_TOKEN']
+    ENV['ZENDESK_DOMAIN'] = 'asdf'
+    ENV['ZENDESK_USER'] = "nunya@example.com"
+    ENV['ZENDESK_TOKEN'] = "q49t84awhg498gh34"
+
+    expect(AdminMailer).not_to receive(:schedule_delivery)
+    m = ContactMessage.process_new({
+      'message' => 'asdf', 
+      'email' => 'asdf@example.com',
+      'recipient' => 'support'
+    })
+    expect(m.errored?).to eq(false)
+    expect(Typhoeus).to receive(:post){|endpoint, args|
+      expect(endpoint).to eq('https://asdf/api/v2/tickets.json')
+      expect(args[:headers]).to eq({'Content-Type' => 'application/json'})
+      expect(args[:userpwd]).to eq("nunya@example.com/token:q49t84awhg498gh34")
+    }.and_return(OpenStruct.new(:code => 201))
+    Worker.process_queues
+
+    ENV['ZENDESK_DOMAIN'] = orig_d
+    ENV['ZENDESK_USER'] = orig_u
+    ENV['ZENDESK_TOKEN'] = orig_t
+  end
+  
+  it "should fall back to an admin email if support ticket submission fails unexpectedly" do
+    orig_d = ENV['ZENDESK_DOMAIN']
+    orig_u = ENV['ZENDESK_USER']
+    orig_t = ENV['ZENDESK_TOKEN']
+    ENV['ZENDESK_DOMAIN'] = 'asdf'
+    ENV['ZENDESK_USER'] = "nunya@example.com"
+    ENV['ZENDESK_TOKEN'] = "q49t84awhg498gh34"
+
+    m = ContactMessage.process_new({
+      'message' => 'asdf', 
+      'email' => 'asdf@example.com',
+      'recipient' => 'support'
+    })
+    expect(m.errored?).to eq(false)
+    expect(Typhoeus).to receive(:post){|endpoint, args|
+      expect(endpoint).to eq('https://asdf/api/v2/tickets.json')
+      expect(args[:headers]).to eq({'Content-Type' => 'application/json'})
+      expect(args[:userpwd]).to eq("nunya@example.com/token:q49t84awhg498gh34")
+    }.and_return(OpenStruct.new(:code => 400, :body => "badness"))
+    expect(AdminMailer).to receive(:schedule_delivery).with(:message_sent, m.global_id).and_return(true)
+    Worker.process_queues
+    m.reload
+    expect(m.settings['error']).to eq('badness')
+
+    ENV['ZENDESK_DOMAIN'] = orig_d
+    ENV['ZENDESK_USER'] = orig_u
+    ENV['ZENDESK_TOKEN'] = orig_t
+  end
+end

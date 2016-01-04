@@ -1,0 +1,2632 @@
+import { describe, it, expect, beforeEach, afterEach, waitsFor, runs, stub } from 'frontend/tests/helpers/jasmine';
+import { queryLog, db_wait, fake_dbman } from 'frontend/tests/helpers/ember_helper';
+import Ember from 'ember';
+import persistence from '../../utils/persistence';
+import speecher from '../../utils/speecher';
+import coughDropExtras from '../../utils/extras';
+import app_state from '../../utils/app_state';
+import modal from '../../utils/modal';
+import stashes from '../../utils/_stashes';
+import editManager from '../../utils/edit_manager';
+import capabilities from '../../utils/capabilities';
+import contentGrabbers from '../../utils/content_grabbers';
+import CoughDrop from '../../app';
+
+describe("persistence-sync", function() {
+  var app = null;
+  var dbman;
+  var pictureGrabber = contentGrabbers.pictureGrabber;
+  var soundGrabber = contentGrabbers.soundGrabber;
+  var dbg = function() {
+    debugger;
+  };
+  beforeEach(function() {
+    app = {
+      register: function(key, obj, args) {
+        app.registered = (key === 'cough_drop:persistence' && obj === persistence && args.singleton === true);
+      },
+      inject: function(component, name, key) {
+        if(name === 'persistence' && key === 'cough_drop:persistence') {
+          app.injections.push(component);
+        }
+      },
+      injections: []
+    };
+    stashes.set('current_mode', 'default');
+    app_state.set('currentBoardState', null);
+    app_state.set('sessionUser', null);
+    stub(speecher, 'load_beep', function() { return Ember.RSVP.resolve({}); });
+    dbman = capabilities.dbman;
+    capabilities.dbman = fake_dbman();
+  });
+  afterEach(function() {
+    capabilities.dbman = dbman;
+  });
+  
+  var board = null;
+  function push_board(callback) {
+    db_wait(function() {
+      CoughDrop.store.push('board', {
+        id: '1234',
+        name: 'Best Board'
+      });
+      var record = null;
+      CoughDrop.store.find('board', '1234').then(function(res) {
+        record = res;
+      });
+      var _this = this;
+      waitsFor(function() { return record; });
+      runs(function() {
+        board = record;
+        Ember.run(_this, callback);
+      });
+    });
+  }
+
+  it("should return a promise", function() {
+    var done = false;
+    var res = persistence.sync(1);
+    expect(persistence.get('sync_status')).toEqual('syncing');
+    expect(res.then).not.toEqual(null);
+    res.then(function() { done = true; }, function() { done = true; });
+    waitsFor(function() { return done; });
+    runs();
+  });
+  
+  it("should make sure the local db is available and error if not", function() {
+    db_wait(function() {
+      var error = null;
+      var db = capabilities.db;
+      capabilities.db = null;
+      var called = false;
+      var promise = new Ember.RSVP.Promise(function(resolve, reject) {
+        called = true;
+        resolve({user: {id: '134', user_name: 'fred'}});
+      });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: promise,
+        id: "134"
+      });
+
+      persistence.sync(134).then(function() {
+        capabilities.db = db;
+      }, function(str) {
+        capabilities.db = db;
+        error = str;
+      });
+      stub(modal, 'error', function() {});
+      waitsFor(function() { return error; });
+      runs(function() {
+        expect(error).toEqual({error: "db not initialized"});
+      });
+    });
+  });
+
+  
+  it("should try to find the specified user, which should then persist that user to the local db", function() {
+    var called = false;
+    var promise = new Ember.RSVP.Promise(function(resolve, reject) {
+      called = true;
+      resolve({user: {id: '134', user_name: 'fred'}});
+    });
+    queryLog.defineFixture({
+      method: 'GET',
+      type: 'user',
+      response: promise,
+      id: "134"
+    });
+    var done = false;
+    persistence.sync(134).then(function() { done = true; }, function() { done = true; });
+    waitsFor(function() { return called && done; });
+    runs();
+  });
+  
+  it("should call find_changed", function() {
+    var called = false;
+    stub(persistence, 'find_changed', function() {
+      called = true;
+      return Ember.RSVP.resolve([]);
+    });
+    queryLog.defineFixture({
+      method: 'GET',
+      type: 'user',
+      response: Ember.RSVP.resolve({user: {id: '134', user_name: 'fred'}}),
+      id: "134"
+    });
+    var done = false;
+    persistence.sync(134).then(function() { done = true; }, function() { done = true; });
+    waitsFor(function() { return called && done; });
+    runs();
+  });
+  
+  
+  it("should save the specified user's avatar as a data-uri", function() {
+    CoughDrop.all_wait = true;
+    var called = false;
+    stub(persistence, 'store_url', function(url, type) {
+      called = (url === "http://example.com/pic.png" && type === 'image');
+      return Ember.RSVP.resolve({url: "http://example.com/pic.png"});
+    });
+    stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+    queryLog.defineFixture({
+      method: 'GET',
+      type: 'user',
+      response: Ember.RSVP.resolve({user: {id: '134', user_name: 'fred', avatar_url: 'http://example.com/pic.png'}}),
+      id: "134"
+    });
+    var done = false;
+    persistence.sync(134).then(function() { done = true; }, function() { done = true; });
+    waitsFor(function() { return called && done; });
+    runs();
+  });
+  
+  it("should traverse all the user's boards, saving their icons and buttons and sounds", function() {
+    var stores = [];
+    stub(persistence, 'store_url', function(url, type) {
+      stores.push(url);
+      console.log(url);
+      return Ember.RSVP.resolve({url: url});
+    });
+    stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+    queryLog.defineFixture({
+      method: 'GET',
+      type: 'user',
+      response: Ember.RSVP.resolve({user: {
+        id: '134', 
+        user_name: 'fred', 
+        avatar_url: 'http://example.com/pic.png',
+        preferences: {home_board: {id: '145'}}
+      }}),
+      id: "134"
+    });
+    queryLog.defineFixture({
+      method: 'GET', 
+      type: 'board',
+      response: Ember.RSVP.resolve({board: {
+        id: '145',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      },
+        image: [
+          {id: '2', url: 'http://example.com/image.png'}
+        ],
+        sound: [
+          {id: '3', url: 'http://example.com/sound.mp3'}
+        ]
+      }),
+      id: '145'
+    });
+    queryLog.defineFixture({
+      method: 'GET', 
+      type: 'board',
+      response: Ember.RSVP.resolve({board: {
+        id: '167',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      },
+        image: [
+          {id: '2', url: 'http://example.com/image2.png'}
+        ]
+      }),
+      id: '167'
+    });
+    var done = false;
+    persistence.sync(134).then(function() { done = true; }, function() { done = true; });
+    waitsFor(function() { return stores.length === 6 && done; });
+    runs(function() {
+      expect(stores.find(function(u) { return u === 'http://example.com/pic.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/board.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/image.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/image2.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/sound.mp3'; })).not.toEqual(null);
+    });
+  });
+  
+  it("should not get stuck in a circular reference for board links", function() {
+    var stores = [];
+    stub(persistence, 'store_url', function(url, type) {
+      stores.push(url);
+      console.log(url);
+      return Ember.RSVP.resolve({url: url});
+    });
+    stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+    queryLog.defineFixture({
+      method: 'GET',
+      type: 'user',
+      response: Ember.RSVP.resolve({user: {
+        id: '134', 
+        user_name: 'fred', 
+        avatar_url: 'http://example.com/pic.png',
+        preferences: {home_board: {id: '145'}}
+      }}),
+      id: "134"
+    });
+    queryLog.defineFixture({
+      method: 'GET', 
+      type: 'board',
+      response: Ember.RSVP.resolve({board: {
+        id: '145',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      },
+        image: [
+          {id: '2', url: 'http://example.com/image.png'}
+        ],
+        sound: [
+          {id: '3', url: 'http://example.com/sound.mp3'}
+        ]
+      }),
+      id: '145'
+    });
+    queryLog.defineFixture({
+      method: 'GET', 
+      type: 'board',
+      response: Ember.RSVP.resolve({board: {
+        id: '167',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', load_board: {id: '145'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      },
+        image: [
+          {id: '2', url: 'http://example.com/image2.png'}
+        ]
+      }),
+      id: '167'
+    });
+    var done = false;
+    persistence.sync(134).then(function() { done = true; }, function() { done = true; });
+    waitsFor(function() { return stores.length === 6 && done; });
+    runs(function() {
+      expect(stores.find(function(u) { return u === 'http://example.com/pic.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/board.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/image.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/image2.png'; })).not.toEqual(null);
+      expect(stores.find(function(u) { return u === 'http://example.com/sound.mp3'; })).not.toEqual(null);
+    });
+  });
+  
+  it("should persist to the local db the list of important ids", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}}
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '167',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '145'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '167'
+      });
+      var ids = null;
+
+      Ember.run.later(function() {
+        persistence.sync(1340).then(function() {
+          setTimeout(function() {
+            persistence.find('settings', 'importantIds').then(function(res) {
+              ids = res.ids;
+            }, function() { ids = []; });
+          }, 50);
+        }, function() { ids = []; });
+      }, 10);
+      waitsFor(function() { return ids; });
+      runs(function() {
+        expect(ids.length).toEqual(10);
+        expect(ids.find(function(u) { return u === 'user_1340'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'dataCache_http://example.com/pic.png'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'image_2'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'dataCache_http://example.com/image.png'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'sound_3'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'dataCache_http://example.com/sound.mp3'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'board_167'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'dataCache_http://example.com/image2.png'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'board_145'; })).not.toEqual(null);
+        expect(ids.find(function(u) { return u === 'dataCache_http://example.com/pic.png'; })).not.toEqual(null);
+      });
+    });
+  });
+  
+  it("should persist to the local db the timestamp of the last sync", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}}
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '167',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '145'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '167'
+      });
+      var stamp = false;
+      var done = false;
+      persistence.sync(1340).then(function() {
+        setTimeout(function() {
+          persistence.find('settings', 'lastSync').then(function(res) {
+            stamp = res.last_sync;
+            done = true;
+          }, function() { done = true; });
+        }, 50);
+      }, function() { done = true; });
+      var ts = (new Date()).getTime() / 1000;
+      waitsFor(function() { return done && (stamp > (ts - 3)); });
+      runs();
+    });
+  });
+  
+   it("should resolve on completion", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}}
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '167',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '167'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '178',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '178'
+      });
+      var done = false;
+      persistence.sync(1340).then(function() {
+        done = true;
+      });
+      waitsFor(function() { return done; });
+      runs();
+    });
+  });
+  
+ it("should resolve on completion, retrieving all boards", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}}
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '167',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '145'}},
+            {id: '2', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '167'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '178',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '145'}},
+            {id: '2', image_id: '2', load_board: {id: '167'}},
+            {id: '3', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '178'
+      });
+      var done = false;
+      persistence.sync(1340).then(function() {
+        done = true;
+      });
+      waitsFor(function() { return done; });
+      runs(function() {
+        var logs = queryLog;
+        expect(logs.findBy('id', '1340')).toNotEqual(undefined);
+        expect(logs.findBy('id', '145')).toNotEqual(undefined);
+        expect(logs.findBy('id', '167')).toNotEqual(undefined);
+        expect(logs.findBy('id', '178')).toNotEqual(undefined);
+      });
+    });
+  });
+  
+ it("should skip board lookups that are already cached locally", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      var b1 = {
+        id: '145',
+        image_url: 'http://example.com/board.png',
+        full_set_revision: 'not_current',
+        buttons: [
+          {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b2 = {
+        id: '167',
+        full_set_revision: 'not_current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', load_board: {id: '145'}},
+          {id: '2', image_id: '2', load_board: {id: '178'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b3 = {
+        id: '178',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', load_board: {id: '145'}},
+          {id: '2', image_id: '2', load_board: {id: '167'}},
+          {id: '3', image_id: '2', load_board: {id: '179'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b4 = {
+        id: '179',
+        full_set_revision: 'whatever',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      
+      var revisions = {};
+      revisions[b1.id] = b1.full_set_revision;
+      revisions[b2.id] = b2.full_set_revision;
+      revisions[b3.id] = b3.full_set_revision;
+      revisions[b4.id] = b4.full_set_revision;
+
+      var store_promises = [];
+      store_promises.push(persistence.store('board', b1, b1.id));
+      store_promises.push(persistence.store('board', b2, b2.id));
+      store_promises.push(persistence.store('board', b3, b3.id));
+      store_promises.push(persistence.store('board', b4, b4.id));
+      store_promises.push(persistence.store('image', {id: '2', url: 'http://www.example.com/pic.png'}, '2'));
+      store_promises.push(persistence.store('dataCache', {url: 'http://www.example.com/pic.png', content_type: 'image/png', data_uri: 'data:image/png;base64,a0a'}, 'http://www.example.com/pic.png'));
+      store_promises.push(persistence.store('settings', revisions, 'synced_full_set_revisions'));
+
+      
+      var stored = false;
+      Ember.RSVP.all_wait(store_promises).then(function() {
+        Ember.run.later(function() {
+          stored = true;
+        }, 100);
+      }, function() {
+        dbg();
+      });
+
+      var done = false;
+      waitsFor(function() { return stored; });
+      runs(function() {
+        CoughDrop.all_wait = true;
+        queryLog.real_lookup = true;
+        
+        b1.full_set_revision = 'current';
+        b2.full_set_revision = 'current';
+        b3.full_set_revision = 'current';
+        b4.full_set_revision = 'current';
+        stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+        stub(Ember.$, 'realAjax', function(options) {
+          if(options.url === '/api/v1/users/1340') {
+            return Ember.RSVP.resolve({user: {
+              id: '1340', 
+              user_name: 'fred', 
+              avatar_url: 'http://example.com/pic.png',
+              preferences: {home_board: {id: '145'}}
+            }});
+          } else if(options.url == '/api/v1/boards/145') {
+            return Ember.RSVP.resolve({
+              board: b1
+            });
+          } else if(options.url == '/api/v1/boards/167') {
+            return Ember.RSVP.resolve({
+              board: b2
+            });
+          } else if(options.url == '/api/v1/boards/178') {
+            return Ember.RSVP.resolve({
+              board: b3
+            });
+          }
+          return Ember.RSVP.reject({});
+        });
+
+        persistence.sync(1340).then(function() {
+          done = true;
+        });
+      });
+      waitsFor(function() { return done; });
+      runs();
+    });
+  });
+  
+ it("should not assume a board is cached locally if an image's dataCache is missing", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      var b1 = {
+        id: '145',
+        image_url: 'http://example.com/board.png',
+        full_set_revision: 'current',
+        buttons: [
+          {id: '1', image_id: '1', sound_id: '3', load_board: {id: '167'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b2 = {
+        id: '167',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', load_board: {id: '168'}},
+          {id: '2', image_id: '2'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b3 = {
+        id: '168',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '1'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      
+      var revisions = {};
+      revisions[b1.id] = b1.full_set_revision;
+      revisions[b2.id] = b2.full_set_revision;
+      revisions[b3.id] = b3.full_set_revision;
+
+      var store_promises = [];
+      store_promises.push(persistence.store('board', b1, b1.id));
+      store_promises.push(persistence.store('board', b2, b2.id));
+      store_promises.push(persistence.store('board', b3, b3.id));
+      store_promises.push(persistence.store('image', {id: '1', url: 'http://www.example.com/pic1.png'}, '1'));
+      store_promises.push(persistence.store('image', {id: '2', url: 'http://www.example.com/pic2.png'}, '2'));
+      store_promises.push(persistence.store('dataCache', {url: 'http://www.example.com/pic1.png', content_type: 'image/png', data_uri: 'data:image/png;base64,a0a'}, 'http://www.example.com/pic1.png'));
+      store_promises.push(persistence.store('settings', revisions, 'synced_full_set_revisions'));
+
+      
+      var stored = false;
+      Ember.RSVP.all_wait(store_promises).then(function() {
+        Ember.run.later(function() {
+          stored = true;
+        }, 100);
+      }, function() {
+        dbg();
+      });
+
+      var done = false;
+      var remote_checked_b1 = false;
+      var remote_checked_b2 = false;
+      var remote_checked_b3 = false;
+
+      waitsFor(function() { return stored; });
+      runs(function() {
+        CoughDrop.all_wait = true;
+        queryLog.real_lookup = true;
+        
+        
+        stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+        stub(Ember.$, 'realAjax', function(options) {
+          if(options.url === '/api/v1/users/1340') {
+            return Ember.RSVP.resolve({user: {
+              id: '1340', 
+              user_name: 'fred', 
+              avatar_url: 'http://example.com/pic.png',
+              preferences: {home_board: {id: '145'}}
+            }});
+          } else if(options.url == '/api/v1/boards/145') {
+            remote_checked_b1 = true;
+            return Ember.RSVP.resolve({
+              board: b1
+            });
+          } else if(options.url == '/api/v1/boards/167') {
+            remote_checked_b2 = true;
+            return Ember.RSVP.resolve({
+              board: b2
+            });
+          } else if(options.url == '/api/v1/boards/168') {
+            remote_checked_b3 = true;
+            return Ember.RSVP.resolve({
+              board: b3
+            });
+          }
+          return Ember.RSVP.reject({});
+        });
+
+        persistence.sync(1340).then(function() {
+          done = true;
+        }, function() {
+          done = true;
+        });
+      });
+      waitsFor(function() { return done && remote_checked_b2; });
+      runs(function() {
+        expect(remote_checked_b1).toEqual(true);
+        expect(remote_checked_b3).toEqual(false);
+      });
+    });
+  });
+
+ it("should not assume a board is cached locally if an image's db entry missing", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      var b1 = {
+        id: '145',
+        image_url: 'http://example.com/board.png',
+        full_set_revision: 'current',
+        buttons: [
+          {id: '1', image_id: '1', sound_id: '3', load_board: {id: '167'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b2 = {
+        id: '167',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', load_board: {id: '168'}},
+          {id: '2', image_id: '2'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b3 = {
+        id: '168',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '1'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      
+      var revisions = {};
+      revisions[b1.id] = b1.full_set_revision;
+      revisions[b2.id] = b2.full_set_revision;
+      revisions[b3.id] = b3.full_set_revision;
+
+      var store_promises = [];
+      store_promises.push(persistence.store('board', b1, b1.id));
+      store_promises.push(persistence.store('board', b2, b2.id));
+      store_promises.push(persistence.store('board', b3, b3.id));
+      store_promises.push(persistence.store('image', {id: '1', url: 'http://www.example.com/pic1.png'}, '1'));
+      store_promises.push(persistence.store('dataCache', {url: 'http://www.example.com/pic1.png', content_type: 'image/png', data_uri: 'data:image/png;base64,a0a'}, 'http://www.example.com/pic1.png'));
+      store_promises.push(persistence.store('settings', revisions, 'synced_full_set_revisions'));
+
+      
+      var stored = false;
+      Ember.RSVP.all_wait(store_promises).then(function() {
+        Ember.run.later(function() {
+          stored = true;
+        }, 100);
+      }, function() {
+        dbg();
+      });
+
+      var done = false;
+      var remote_checked_b1 = false;
+      var remote_checked_b2 = false;
+      var remote_checked_b3 = false;
+
+      waitsFor(function() { return stored; });
+      runs(function() {
+        CoughDrop.all_wait = true;
+        queryLog.real_lookup = true;
+        
+        
+        stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+        stub(Ember.$, 'realAjax', function(options) {
+          if(options.url === '/api/v1/users/1340') {
+            return Ember.RSVP.resolve({user: {
+              id: '1340', 
+              user_name: 'fred', 
+              avatar_url: 'http://example.com/pic.png',
+              preferences: {home_board: {id: '145'}}
+            }});
+          } else if(options.url == '/api/v1/boards/145') {
+            remote_checked_b1 = true;
+            return Ember.RSVP.resolve({
+              board: b1
+            });
+          } else if(options.url == '/api/v1/boards/167') {
+            remote_checked_b2 = true;
+            return Ember.RSVP.resolve({
+              board: b2
+            });
+          } else if(options.url == '/api/v1/boards/168') {
+            remote_checked_b3 = true;
+            return Ember.RSVP.resolve({
+              board: b3
+            });
+          }
+          return Ember.RSVP.reject({});
+        });
+
+        persistence.sync(1340).then(function() {
+          done = true;
+        }, function() {
+          done = true;
+        });
+      });
+      waitsFor(function() { return done && remote_checked_b2; });
+      runs(function() {
+        expect(remote_checked_b1).toEqual(true);
+        expect(remote_checked_b3).toEqual(false);
+      });
+    });
+  });
+
+ it("should not assume a board is cached locally if a board's db entry missing", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      var b1 = {
+        id: '145',
+        image_url: 'http://example.com/board.png',
+        full_set_revision: 'current',
+        buttons: [
+          {id: '1', image_id: '1', sound_id: '3', load_board: {id: '167'}}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b2 = {
+        id: '167',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '2', load_board: {id: '168'}},
+          {id: '2', image_id: '2'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      var b3 = {
+        id: '168',
+        full_set_revision: 'current',
+        image_url: 'http://example.com/board.png',
+        buttons: [
+          {id: '1', image_id: '1'}
+        ],
+        grid: {
+          rows: 1,
+          columns: 1,
+          order: [['1']]
+        }
+      };
+      
+      var revisions = {};
+      revisions[b1.id] = b1.full_set_revision;
+      revisions[b2.id] = b2.full_set_revision;
+      revisions[b3.id] = b3.full_set_revision;
+
+      var store_promises = [];
+      store_promises.push(persistence.store('board', b1, b1.id));
+      store_promises.push(persistence.store('board', b3, b3.id));
+      store_promises.push(persistence.store('image', {id: '1', url: 'http://www.example.com/pic1.png'}, '1'));
+      store_promises.push(persistence.store('dataCache', {url: 'http://www.example.com/pic1.png', content_type: 'image/png', data_uri: 'data:image/png;base64,a0a'}, 'http://www.example.com/pic1.png'));
+      store_promises.push(persistence.store('settings', revisions, 'synced_full_set_revisions'));
+
+      
+      var stored = false;
+      Ember.RSVP.all_wait(store_promises).then(function() {
+        Ember.run.later(function() {
+          stored = true;
+        }, 100);
+      }, function() {
+        dbg();
+      });
+
+      var done = false;
+      var remote_checked_b1 = false;
+      var remote_checked_b2 = false;
+      var remote_checked_b3 = false;
+
+      waitsFor(function() { return stored; });
+      runs(function() {
+        CoughDrop.all_wait = true;
+        queryLog.real_lookup = true;
+        
+        
+        stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+        stub(Ember.$, 'realAjax', function(options) {
+          if(options.url === '/api/v1/users/1340') {
+            return Ember.RSVP.resolve({user: {
+              id: '1340', 
+              user_name: 'fred', 
+              avatar_url: 'http://example.com/pic.png',
+              preferences: {home_board: {id: '145'}}
+            }});
+          } else if(options.url == '/api/v1/boards/145') {
+            remote_checked_b1 = true;
+            return Ember.RSVP.resolve({
+              board: b1
+            });
+          } else if(options.url == '/api/v1/boards/167') {
+            remote_checked_b2 = true;
+            return Ember.RSVP.resolve({
+              board: b2
+            });
+          } else if(options.url == '/api/v1/boards/168') {
+            remote_checked_b3 = true;
+            return Ember.RSVP.resolve({
+              board: b3
+            });
+          }
+          return Ember.RSVP.reject({});
+        });
+
+        persistence.sync(1340).then(function() {
+          done = true;
+        }, function() {
+          done = true;
+        });
+      });
+      waitsFor(function() { return done && remote_checked_b2; });
+      runs(function() {
+        expect(remote_checked_b1).toEqual(true);
+        expect(remote_checked_b3).toEqual(false);
+      });
+    });
+  });
+
+  it("should error if a required board isn't available", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(modal, 'error', function() { });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}}
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+
+      var r = Ember.RSVP.reject({error: "Not authorized"});
+      r.then(null, function() { });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: r,
+        id: '167'
+      });
+      
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '178',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '145'}},
+            {id: '2', image_id: '2', load_board: {id: '167'}},
+            {id: '3', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '178'
+      });
+      var error = null;
+      persistence.sync(1340).then(null, function(err) {
+        error = err;
+      });
+      waitsFor(function() { return error; });
+      runs(function() {
+        var logs = queryLog;
+        expect(error.board_unauthorized).toEqual(true);
+        expect(logs.findBy('id', '1340')).toNotEqual(undefined);
+        expect(logs.findBy('id', '145')).toNotEqual(undefined);
+        expect(logs.findBy('id', '167')).toNotEqual(undefined);
+      });
+    });
+  });
+  
+ it("should not error if a link_disabled board isn't available", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}}
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}, link_disabled: true}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+
+      var r = Ember.RSVP.reject({error: "Not authorized"});
+      r.then(null, function() { });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: r,
+        id: '167'
+      });
+      
+      var done = false;
+      persistence.sync(1340).then(function() {
+        done = true;
+      });
+      waitsFor(function() { return done; });
+      runs(function() {
+        var logs = queryLog;
+        expect(logs.findBy('id', '1340')).toNotEqual(undefined);
+        expect(logs.findBy('id', '145')).toNotEqual(undefined);
+        expect(logs.findBy('id', '167')).toNotEqual(undefined);
+      });
+    });
+  });
+
+  it("should create any newly-created records from find_changed", function() {
+    db_wait(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      persistence.set('online', false);
+      var record = null;
+      var found_record = null;
+      var created = null;
+      
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.url === '/api/v1/users/1340') {
+          return Ember.RSVP.resolve({user: {
+            id: '1340',
+            user_name: 'fred'
+          }});
+        } else if(options.type === 'POST' && options.url === '/api/v1/boards') {
+          if(options.data.board.key === found_record.key) {
+            created = true;
+            return Ember.RSVP.resolve({board: {
+              id: '1998',
+              key: 'fred/cool'
+            }});
+          }
+        }
+        return Ember.RSVP.reject({});
+      });
+
+      var board = CoughDrop.store.createRecord('board', {key: 'ok/cool', name: "My Awesome Board"});
+      board.save().then(function(res) {
+        record = res;
+      });
+      
+      waitsFor(function() { return record; });
+      runs(function() {
+        setTimeout(function() {
+          persistence.find('board', record.id).then(function(res) {
+            found_record = res;
+          });
+        }, 50);
+      });
+      var done = false;
+      var found_record_id = null;
+      waitsFor(function() { return found_record; });
+      runs(function() {
+        expect(!!found_record.id.match(/^tmp_/)).toEqual(true);
+        expect(!!found_record.key.match(/^tmp_.+\/cool/)).toEqual(true);
+        expect(found_record.name).toEqual("My Awesome Board");
+        Ember.run.later(function() {
+          found_record_id = found_record.id;
+          persistence.set('online', true);
+          persistence.sync(1340).then(null, function() {
+            done = true;
+          });
+        });
+      });
+      var removed = false;
+      waitsFor(function() { return done; });
+      runs(function() {
+        setTimeout(function() {
+          persistence.find('board', '1998').then(function(res) {
+            persistence.find('board', found_record_id).then(function() { dbg(); }, function() {
+              removed = true;
+            });
+          }, function() { dbg(); });
+        }, 50);
+      });
+      waitsFor(function() { return removed; });
+      runs();
+    });
+  });
+  
+  it("should update any changed records from find_changed", function() {
+    db_wait(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      var record = null;
+      var updated_record = null;
+      var remote_updated = null;
+
+      var board = CoughDrop.store.createRecord('board', {key: 'ok/cool', name: "My Awesome Board"});
+      board.save().then(function(res) {
+        record = res;
+      });
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.type === 'GET' && options.url === "/api/v1/users/1567") {
+          return Ember.RSVP.resolve({ user: {
+            id: '1567',
+            user_name: 'freddy'
+          }});
+        } else if(options.type === 'POST' && options.url === "/api/v1/boards") {
+          if(options.data.board.name === "My Awesome Board") {
+            return Ember.RSVP.resolve({ board: {
+              id: '1234',
+              name: 'Righteous Board'
+            }});
+          }
+        } else if(options.type === 'PUT' && options.url === "/api/v1/boards/1234") {
+          if(options.data.board.name === "My Gnarly Board") {
+            remote_updated = true;
+            return Ember.RSVP.resolve({ board: {
+              id: '1234',
+              name: 'Stellar Board'
+            }});
+          }
+        }
+        return Ember.RSVP.reject({});
+      });
+      
+      waitsFor(function() { return record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(record.get('id')).toEqual("1234");
+          expect(record.get('name')).toEqual("Righteous Board");
+          persistence.set('online', false);
+          record.set('name', 'My Gnarly Board');
+          record.save().then(function() {
+            setTimeout(function() {
+              coughDropExtras.storage.find('board', '1234').then(function(res) {
+                updated_record = res;
+              });
+            }, 50);
+          }, function() { dbg(); });
+        }, 50);
+      });
+      var done = false;
+      waitsFor(function() { return updated_record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(updated_record.raw.id).toEqual("1234");
+          expect(updated_record.raw.name).toEqual("My Gnarly Board");
+          expect(updated_record.changed).toEqual(true);
+          persistence.set('online', true);
+          persistence.sync('1567').then(function() { dbg(); }, function() {
+            setTimeout(function() {
+              done = true;
+            }, 10);
+          });
+        }, 10);
+      });
+      var final_record = null;
+      window.persistence = persistence;
+      waitsFor(function() { return done && remote_updated; });
+      runs(function() {
+        setTimeout(function() {
+          persistence.find('board', '1234').then(function(res) {
+            final_record = res;
+          }, function() { dbg(); });
+          setTimeout(function() {
+            persistence.find('board', '1234').then(function(res) { console.log(res); });
+          }, 10);
+        }, 50);
+      });
+      waitsFor(function() { return final_record; });
+      runs(function() {
+        persistence.find('board', '1234').then(function(res) { console.log(res); });
+        expect(final_record.name).toEqual("Stellar Board");
+      });
+    });
+  });
+
+  it("should delete from the server when sync is finally called 2", function() {
+    push_board(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      persistence.set('online', false);
+      var deleted = null;
+      board.deleteRecord();
+      board.save().then(function(res) {
+        setTimeout(function() {
+          persistence.find('board', '1234').then(function() { dbg(); }, function() {
+            deleted = true;
+          });
+        }, 50);
+      }, function() { dbg(); });
+      var found_deletion = null;
+      waitsFor(function() { return deleted; });
+      runs(function() {
+        coughDropExtras.storage.find('deletion', 'board_1234').then(function() {
+          found_deletion = true;
+        });
+      });
+
+      var remotely_deleted = false;
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.url === '/api/v1/users/1256') {
+          return Ember.RSVP.resolve({user: {
+            id: '1256',
+            user_name: 'fred'
+          }});
+        } else if(options.url === '/api/v1/boards/1234') {
+          if(options.type === 'GET') {
+            return Ember.RSVP.resolve({board: {
+              id: '1234',
+              key: 'fred/cool'
+            }});
+          } else if(options.type === 'DELETE') {
+            remotely_deleted = true;
+            return Ember.RSVP.resolve({board: {id: '1234'}});
+          }
+        } else {
+          return Ember.RSVP.reject({});
+        }
+      });
+      waitsFor(function() { return found_deletion; });
+      runs(function() {
+        Ember.run.later(function() {
+          persistence.set('online', true);
+          persistence.sync(1256).then(null, function() { });
+        });
+      });
+      waitsFor(function() { return remotely_deleted; });
+      runs();
+    });
+  });
+
+  it("should error on failure updating a changed record", function() {
+    db_wait(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      var record = null;
+      var updated_record = null;
+      var remote_updated = null;
+
+      var board = CoughDrop.store.createRecord('board', {key: 'ok/cool', name: "My Awesome Board"});
+      board.save().then(function(res) {
+        record = res;
+      });
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.type === 'GET' && options.url === "/api/v1/users/1567") {
+          return Ember.RSVP.resolve({ user: {
+            id: '1567',
+            user_name: 'freddy',
+            avatar_url: 'data:image/png;base64,a0a'
+          }});
+        } else if(options.type === 'GET' && options.url === "/api/v1/board/1234") {
+          return Ember.RSVP.resolve({ board: {
+            id: '1234',
+            name: 'Righteous Board'
+          }});
+        } else if(options.type === 'POST' && options.url === "/api/v1/boards") {
+          if(options.data.board.name === "My Awesome Board") {
+            return Ember.RSVP.resolve({ board: {
+              id: '1234',
+              name: 'Righteous Board'
+            }});
+          }
+        } else if(options.type === 'PUT' && options.url === "/api/v1/boards/1234") {
+          if(options.data.board.name === "Yodeling Board") {
+            remote_updated = true;
+            return Ember.RSVP.reject({});
+          }
+        }
+        dbg();
+        return Ember.RSVP.reject({});
+      });
+      
+      stub(persistence, 'find_changed', function() {
+        return Ember.RSVP.resolve([
+          {store: 'board', data: { raw: { id: '1234', name: 'Yodeling Board' } }}
+        ]);
+      });
+      stub(modal, 'error', function() { });
+      
+      waitsFor(function() { return record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(record.get('id')).toEqual("1234");
+          expect(record.get('name')).toEqual("Righteous Board");
+          persistence.set('online', false);
+          record.set('name', 'My Gnarly Board');
+          record.save().then(function() {
+            setTimeout(function() {
+              coughDropExtras.storage.find('board', '1234').then(function(res) {
+                updated_record = res;
+              });
+            }, 50);
+          }, function() { dbg(); });
+        }, 50);
+      });
+      var error = null;
+      waitsFor(function() { return updated_record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(updated_record.raw.id).toEqual("1234");
+          expect(updated_record.raw.name).toEqual("My Gnarly Board");
+          expect(updated_record.changed).toEqual(true);
+          persistence.set('online', true);
+          persistence.sync('1567').then(function() { dbg(); }, function(err) {
+            error = err;
+          });
+        }, 50);
+      });
+      var final_record = null;
+      waitsFor(function() { return error; });
+      runs(function() {
+        setTimeout(function() {
+          persistence.find('board', '1234').then(function(res) {
+            final_record = res;
+          }, function() { dbg(); });
+        }, 50);
+      });
+      waitsFor(function() { return final_record; });
+      runs(function() {
+        expect(final_record.name).toEqual("My Gnarly Board");
+        expect(error.error).toEqual("failed to save board 1234");
+      });
+    });
+  });
+  
+  it("should error on failure creating a changed record", function() {
+    db_wait(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      persistence.set('online', false);
+      var record = null;
+      var found_record = null;
+      var created = null;
+      
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.url === '/api/v1/users/1340') {
+          return Ember.RSVP.resolve({user: {
+            id: '1340',
+            user_name: 'fred',
+            avatar_url: 'data:image/png;base64,a0a'
+          }});
+        } else if(options.type === 'POST' && options.url === '/api/v1/boards') {
+          if(options.data.board.key === found_record.key) {
+            created = true;
+            return Ember.RSVP.reject({});
+          }
+        }
+        return Ember.RSVP.reject({});
+      });
+      stub(modal, 'error', function() { });
+      stub(persistence, 'find_changed', function() {
+        return Ember.RSVP.resolve([
+          {store: 'board', data: {raw: {id: found_record.id, key: found_record.key} }}
+        ]);
+      });
+
+      var board = CoughDrop.store.createRecord('board', {key: 'ok/cool', name: "My Awesome Board"});
+      board.save().then(function(res) {
+        record = res;
+      });
+      
+      waitsFor(function() { return record; });
+      runs(function() {
+        setTimeout(function() {
+          persistence.find('board', record.id).then(function(res) {
+            found_record = res;
+          });
+        }, 50);
+      });
+      var error = null;
+      waitsFor(function() { return found_record; });
+      runs(function() {
+        expect(!!found_record.id.match(/^tmp_/)).toEqual(true);
+        expect(!!found_record.key.match(/^tmp_.+\/cool/)).toEqual(true);
+        expect(found_record.name).toEqual("My Awesome Board");
+        Ember.run.later(function() {
+          persistence.set('online', true);
+          persistence.sync(1340).then(null, function(err) {
+            error = err;
+          });
+        });
+      });
+      var removed = false;
+      waitsFor(function() { return error; });
+      runs(function() {
+        expect(error.error).toEqual('failed to save board null');
+      });
+    });
+  });
+  
+  it("should upload a locally-created image file during sync", function() {
+    db_wait(function() {
+      queryLog.real_lookup = true;
+      persistence.set('online', false);
+      var obj = Ember.Object.create({
+      });
+      var controller = Ember.Object.extend({
+        send: function(message) {
+          this.sentMessages[message] = arguments;
+        },
+        model: Ember.Object.create()
+      }).create({
+        'currentUser': Ember.Object.create({user_name: 'bob', profile_url: 'http://www.bob.com/bob'}),
+        sentMessages: {},
+        id: '456',
+        licenseOptions: [],
+        'board': {model: obj}
+      });
+      stub(editManager, 'controller', controller.get('board'));
+      stub(app_state, 'controller', controller);
+      var button = Ember.Object.extend({
+        findContentLocally: function() {
+          this.foundContentLocally = true;
+          return Ember.RSVP.resolve(true);
+        }
+      }).create();
+      pictureGrabber.setup(button, controller);
+      controller.set('image_preview', {url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=='});
+      var button_set = false;
+      stub(editManager, 'change_button', function(id, args) { 
+        if(id === '456' && args.image_id === '123') { button_set = true; }
+      });
+      pictureGrabber.select_image_preview();
+      
+      var record = null;
+      waitsFor(function() { return controller.get('model.image'); });
+      runs(function() {
+        expect(!!controller.get('model.image.id').match(/^tmp_/)).toEqual(true);
+        expect(controller.get('model.image.url')).toEqual('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==');
+        expect(controller.get('image_preview')).toEqual(null);
+        setTimeout(function() {
+          persistence.find('image', controller.get('model.image.id')).then(function(res) {
+            record = res;
+          });
+        }, 50);
+      });
+
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.url === '/api/v1/users/1340') {
+          return Ember.RSVP.resolve({user: {
+            id: '1340',
+            user_name: 'fred',
+            avatar_url: 'data:image/png;base64,a0a'
+          }});
+        } else if(options.type === 'POST' && options.url === '/api/v1/images') {
+          return Ember.RSVP.resolve({image: {
+            id: '1432',
+            url: 'http://example.com/pic.png'
+          }});
+        } else if(options.type === 'GET' && options.url === '/api/v1/images/1432') {
+          return Ember.RSVP.resolve({image: {
+            id: '1432',
+            url: 'http://example.com/pic.png'
+          }});
+        }
+        return Ember.RSVP.reject({});
+      });
+      stub(persistence, 'find_changed', function() {
+        return Ember.RSVP.resolve([
+          {store: 'image', data: {raw: record }}
+        ]);
+      });
+
+      var done = false;
+      waitsFor(function() { return record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(!!record.id.match(/^tmp_/)).toEqual(true);
+          expect(record.url).toEqual('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==');
+          persistence.set('online', true);
+          persistence.sync(1340).then(function() {
+            done = true;
+          });
+        });
+      });
+      waitsFor(function() { return done; });
+      runs();
+    });
+  });
+  
+  it("should upload a locally-created sound file during sync", function() {
+    db_wait(function() {
+      queryLog.real_lookup = true;
+      persistence.set('online', false);
+      var obj = Ember.Object.create({
+      });
+      var controller = Ember.Object.extend({
+        send: function(message) {
+          this.sentMessages[message] = arguments;
+        },
+        model: Ember.Object.create()
+      }).create({
+        'currentUser': Ember.Object.create({user_name: 'bob', profile_url: 'http://www.bob.com/bob'}),
+        sentMessages: {},
+        id: '456',
+        licenseOptions: [],
+        'board': {model: obj}
+      });
+      stub(app_state, 'controller', controller);
+      stub(editManager, 'controller', controller.get('board'));
+      var button = Ember.Object.extend({
+        findContentLocally: function() {
+          this.foundContentLocally = true;
+          return Ember.RSVP.resolve(true);
+        }
+      }).create();
+      soundGrabber.setup(button, controller);
+      controller.set('sound_preview', {url: 'data:audio/mp3;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=='});
+      var button_set = false;
+      stub(editManager, 'change_button', function(id, args) { 
+        if(id === '456' && args.sound_id === '123') { button_set = true; }
+      });
+      stub(window, 'Audio', function() {
+        var res = {};
+        function check() {
+          if(res.src && res.ondurationchange) {
+            res.ondurationchange();
+          } else {
+            setTimeout(check, 10);
+          }
+        }
+        setTimeout(check, 10);
+        return res;
+      });
+      soundGrabber.select_sound_preview();
+      
+      var record = null;
+      waitsFor(function() { return controller.get('model.sound'); });
+      runs(function() {
+        expect(!!controller.get('model.sound.id').match(/^tmp_/)).toEqual(true);
+        expect(controller.get('model.sound.url')).toEqual('data:audio/mp3;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==');
+        expect(controller.get('sound_preview')).toEqual(null);
+        setTimeout(function() {
+          persistence.find('sound', controller.get('model.sound.id')).then(function(res) {
+            record = res;
+          });
+        }, 50);
+      });
+
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.url === '/api/v1/users/1340') {
+          return Ember.RSVP.resolve({user: {
+            id: '1340',
+            user_name: 'fred',
+            avatar_url: 'data:image/png;base64,a0a'
+          }});
+        } else if(options.type === 'POST' && options.url === '/api/v1/sounds') {
+          return Ember.RSVP.resolve({sound: {
+            id: '1432',
+            url: 'http://example.com/pic.png'
+          }});
+        } else if(options.type === 'GET' && options.url === '/api/v1/sounds/1432') {
+          return Ember.RSVP.resolve({sound: {
+            id: '1432',
+            url: 'http://example.com/pic.png'
+          }});
+        }
+        return Ember.RSVP.reject({});
+      });
+      stub(persistence, 'find_changed', function() {
+        return Ember.RSVP.resolve([
+          {store: 'sound', data: {raw: record }}
+        ]);
+      });
+
+      var done = false;
+      waitsFor(function() { return record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(!!record.id.match(/^tmp_/)).toEqual(true);
+          expect(record.url).toEqual('data:audio/mp3;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==');
+          persistence.set('online', true);
+          persistence.sync(1340).then(function() {
+            done = true;
+          });
+        });
+      });
+      waitsFor(function() { return done; });
+      runs();
+    });
+  });
+  
+  it("should clear changed status of successfully-updated records on partial sync", function() {
+    db_wait(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      var record = null;
+      var updated_record = null;
+      var remote_updated = null;
+
+      var board = CoughDrop.store.createRecord('board', {key: 'ok/cool', name: "My Awesome Board"});
+      board.save().then(function(res) {
+        record = res;
+      });
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.type === 'GET' && options.url === "/api/v1/users/1567") {
+          return Ember.RSVP.resolve({ user: {
+            id: '1567',
+            user_name: 'freddy'
+          }});
+        } else if(options.type === 'POST' && options.url === "/api/v1/boards") {
+          if(options.data.board.name === "My Awesome Board") {
+            return Ember.RSVP.resolve({ board: {
+              id: '1234',
+              name: 'Righteous Board'
+            }});
+          }
+        } else if(options.type === 'PUT' && options.url === "/api/v1/boards/1234") {
+          if(options.data.board.name === "My Gnarly Board") {
+            remote_updated = true;
+            return Ember.RSVP.resolve({ board: {
+              id: '1234',
+              name: 'Stellar Board'
+            }});
+          }
+        }
+        return Ember.RSVP.reject({});
+      });
+      
+      waitsFor(function() { return record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(record.get('id')).toEqual("1234");
+          expect(record.get('name')).toEqual("Righteous Board");
+          persistence.set('online', false);
+          record.set('name', 'My Gnarly Board');
+          record.save().then(function() {
+            setTimeout(function() {
+              coughDropExtras.storage.find('board', '1234').then(function(res) {
+                updated_record = res;
+              });
+            }, 50);
+          }, function() { dbg(); });
+        }, 50);
+      });
+      var done = false;
+      waitsFor(function() { return updated_record; });
+      runs(function() {
+        Ember.run.later(function() {
+          expect(updated_record.raw.id).toEqual("1234");
+          expect(updated_record.raw.name).toEqual("My Gnarly Board");
+          expect(updated_record.changed).toEqual(true);
+          persistence.set('online', true);
+          persistence.sync('1567').then(function() { dbg(); }, function() {
+            done = true;
+          });
+        }, 50);
+      });
+      var final_record = null;
+      waitsFor(function() { return done && remote_updated; });
+      runs(function() {
+        setTimeout(function() {
+          coughDropExtras.storage.find('board', '1234').then(function(res) {
+            final_record = res;
+          }, function() { dbg(); });
+        }, 50);
+      });
+      waitsFor(function() { return final_record; });
+      runs(function() {
+        expect(final_record.raw.name).toEqual("Stellar Board");
+        expect(final_record.changed).toEqual(false);
+      });
+    });
+  });
+  
+  it("should update all board links to sub-boards, images and sounds containing temporary identifiers as part of sync", function() {
+    db_wait(function() {
+      CoughDrop.all_wait = true;
+      queryLog.real_lookup = true;
+      
+
+      stub(Ember.$, 'realAjax', function(options) {
+        if(options.type == 'GET' && options.url == "/api/v1/users/1567") {
+          return Ember.RSVP.resolve({ user: {
+            id: '1567',
+            user_name: 'freddy',
+            avatar_url: 'data:image/png;base64,a000'
+          }});
+        } else if(options.type == 'POST' && options.url == "/api/v1/boards") {
+          var board = options.data.board;
+          if(board.name == "My Awesome Board") {
+            return Ember.RSVP.resolve({ board: {
+              id: '1234',
+              name: 'Righteous Board',
+              buttons: board.buttons,
+              order: board.order
+            }});
+          } else if(options.data.board.name == "Temp Board") {
+            return Ember.RSVP.resolve({ board: {
+              id: '1235',
+              name: 'Previously-Temp Board',
+              buttons: board.buttons,
+              order: board.order
+            }});
+          }
+        } else if(options.type == 'PUT' && options.url == '/api/v1/boards/1234') {
+          var res = options.data.board;
+          res.id = '1234';
+          return Ember.RSVP.resolve({ board: res });
+        } else if(options.type == 'PUT' && options.url == '/api/v1/boards/1235') {
+          var res = options.data.board;
+          res.id = '1235';
+          return Ember.RSVP.resolve({ board: res });
+        } else if(options.type == 'POST' && options.url == '/api/v1/images') {
+          return Ember.RSVP.resolve({ image: {
+            id: '1236'
+          }});
+        } else if(options.type == 'POST' && options.url == '/api/v1/sounds') {
+          return Ember.RSVP.resolve({ sound: {
+            id: '1237'
+          }});
+        } else if(options.type == 'GET' && options.url == '/api/v1/images/1236') {
+          return Ember.RSVP.resolve({ image: {
+            id: '1236'
+          }});
+        } else if(options.type == 'GET' && options.url == '/api/v1/sounds/1237') {
+          return Ember.RSVP.resolve({ sound: {
+            id: '1237'
+          }});
+        }
+        dbg();
+        return Ember.RSVP.reject({});
+      });
+      
+      var server_board, tmp_board, tmp_image, tmp_sound;
+      var new_image, new_board, new_sound;
+      // create a server-side board
+      var board = CoughDrop.store.createRecord('board', {key: 'ok/cool', name: "My Awesome Board"});
+      board.save().then(function(res) {
+        server_board = res;
+      });
+      
+      var temps_made = false;
+      waitsFor(function() { return server_board; });
+      runs(function() {
+        persistence.set('online', false);
+        Ember.run.later(function() {
+          // create a temporary image
+          // create a temporary sound
+          // create a temporary board
+          expect(server_board.get('id')).toEqual("1234");
+          expect(server_board.get('name')).toEqual("Righteous Board");
+          persistence.set('online', false);
+          
+          var board2 = CoughDrop.store.createRecord('board', {key: 'ok/cool2', name: 'Temp Board'});
+          board2.save().then(function(res) { 
+            tmp_board = res; 
+          });
+          
+          var image = CoughDrop.store.createRecord('image', {});
+          image.save().then(function(res) { 
+            setTimeout(function() {
+              persistence.find('image', res.get('id')).then(function(res) {
+                tmp_image = res;
+              });
+            }, 50);
+          });
+          
+          var sound = CoughDrop.store.createRecord('sound', {});
+          sound.save().then(function(res) { 
+            setTimeout(function() {
+              persistence.find('sound', res.get('id')).then(function(res) {
+                tmp_sound = res;
+              });
+            }, 50);
+          });
+        }, 50);
+      });
+      
+      var server_board_updated, tmp_board_updated;
+      waitsFor(function() { return server_board && tmp_image && tmp_sound && tmp_board; });
+      runs(function() {
+        // update the server-side board with links to all three temporary records
+        // update the temporary board with links to all three temporary records
+        Ember.run(function() {
+          var buttons = [
+            {
+              id: 1,
+              image_id: tmp_image.id,
+              sound_id: tmp_sound.id,
+              load_board: {
+                id: tmp_board.get('id'),
+                key: tmp_board.get('key')
+              }
+            },
+            {
+              id: 2,
+              load_board: {
+                id: server_board.get('id'),
+                key: server_board.get('key')
+              }
+            }
+          ];
+          var grid = {
+            rows: 2,
+            columns: 2,
+            order: [[1, 2], [null, null]]
+          };
+          server_board.set('buttons', buttons);
+          server_board.set('grid', grid);
+          server_board.save().then(function(res) {
+            setTimeout(function() {
+              persistence.find('board', res.get('id')).then(function(res) {
+                server_board = res;
+                server_board_updated = true;
+              });
+            }, 50);
+          });
+          tmp_board.set('buttons', buttons);
+          tmp_board.set('grid', grid);
+          tmp_board.save().then(function(res) {
+            setTimeout(function() {
+              persistence.find('board', res.get('id')).then(function(res) {
+                tmp_board = res;
+                tmp_board_updated = true;
+              });
+            }, 50);
+          });
+        });
+      });
+      var synced = false;
+      waitsFor(function() { return server_board_updated && tmp_board_updated; });
+      runs(function() {
+        var tmp_board_id = tmp_board.id;
+        var tmp_image_id = tmp_image.id;
+        var tmp_sound_id = tmp_sound.id;
+        persistence.set('online', true);
+        // stub find_changed to return the records with the server-side board first
+        stub(persistence, 'find_changed', function() {
+          return Ember.RSVP.resolve([
+            {store: 'board', data: { raw: server_board }},
+            {store: 'board', data: { raw: tmp_board }},
+            {store: 'image', data: { raw: tmp_image }},
+            {store: 'sound', data: { raw: tmp_sound }}
+          ]);
+        });
+        Ember.run.later(function() {
+          // call sync
+          persistence.sync(1567).then(function() {
+            setTimeout(function() {
+              // re-lookup
+              synced = true;
+              persistence.find('board', server_board.id).then(function(res) {
+                server_board = res;
+                persistence.find('board', res.buttons[0].load_board.id).then(function(res) {
+                  new_board = res;
+                });
+                persistence.find('image', res.buttons[0].image_id).then(function(res) {
+                  new_image = res;
+                });
+                persistence.find('sound', res.buttons[0].sound_id).then(function(res) {
+                  new_sound = res;
+                });
+              });
+              persistence.find('board', tmp_board_id).then(null, function() {
+                tmp_board = null;
+              });
+              persistence.find('image', tmp_image_id).then(null, function() {
+                tmp_image = null;
+              });
+              persistence.find('sound', tmp_sound_id).then(null, function() {
+                tmp_sound = null;
+              });
+            }, 50);
+          }, function(err) {
+            dbg();
+          });
+        }, 50);
+      });
+      // make sure the temporary image has a permanent id
+      // make sure the temporary sound has a permanent id
+      // make sure the temporary board has a permanent id
+      waitsFor(function() { return synced && !tmp_image && !tmp_sound && !tmp_board && new_image && new_sound && new_board; });
+      runs(function() {
+        // make sure the temporary board points to the permanent sound and image and board ids
+        expect(!!new_board.buttons[0].image_id.match(/^tmp_/)).toEqual(false);
+        expect(!!new_board.buttons[0].sound_id.match(/^tmp_/)).toEqual(false);
+        expect(!!new_board.buttons[0].load_board.id.match(/^tmp_/)).toEqual(false);
+        expect(new_board.buttons[0].image_id).toEqual(new_image.id);
+        expect(new_board.buttons[0].sound_id).toEqual(new_sound.id);
+        expect(new_board.buttons[0].load_board.id).toEqual(new_board.id);
+        // make sure the server-side board points to the permanent sound and image and board ids
+        expect(!!server_board.buttons[0].image_id.match(/^tmp_/)).toEqual(false);
+        expect(!!server_board.buttons[0].sound_id.match(/^tmp_/)).toEqual(false);
+        expect(!!server_board.buttons[0].load_board.id.match(/^tmp_/)).toEqual(false);
+        expect(server_board.buttons[0].image_id).toEqual(new_image.id);
+        expect(server_board.buttons[0].sound_id).toEqual(new_sound.id);
+        expect(server_board.buttons[0].load_board.id).toEqual(new_board.id);
+      });
+    });
+  });
+  
+  it("should delete changed stuff", function() {
+    db_wait(function() {
+      var board_cleared = false;
+      var image_cleared = false;
+      var sound_cleared = false;
+      capabilities.dbman.clear('board', function() {
+        board_cleared = true;
+      });
+      capabilities.dbman.clear('image', function() {
+        image_cleared = true;
+      });
+      capabilities.dbman.clear('sound', function() {
+        sound_cleared = true;
+      });
+      waitsFor(function() { return board_cleared && image_cleared && sound_cleared; });
+      runs();
+    });
+  });
+  
+  it("should try to sync supervisee-related boards if there are any", function() {
+    db_wait(function() {
+      var stores = [];
+      var warnings = [];
+      stub(modal, 'warning', function(message) {
+        warnings.push(message);
+      });
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}},
+          supervisees: [
+            {id: '1', user_name: 'fiona'},
+            {id: '2', user_name: 'alastar'}
+          ]
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1', 
+          user_name: 'fiona', 
+          avatar_url: 'http://example.com/pic2.png',
+          permissions: {supervise: true},
+          preferences: {home_board: {id: '177'}},
+          supervisees: [
+            {id: '3', user_name: 'dwight'}
+          ]
+        }}),
+        id: "1"
+      });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '2', 
+          user_name: 'alastar', 
+          avatar_url: 'http://example.com/pic3.png',
+          permissions: {supervise: true},
+          preferences: {home_board: {id: '179'}},
+        }}),
+        id: "2"
+      });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '3', 
+          user_name: 'dwight', 
+          avatar_url: 'http://example.com/pic4.png',
+          permissions: {supervise: true},
+          preferences: {home_board: {id: '179'}},
+        }}),
+        id: "3"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '167',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '167'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '178',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '178'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '177',
+          image_url: 'http://example.com/board2.png',
+          buttons: [
+            {id: '1', image_id: '2'}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '177'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '179',
+          image_url: 'http://example.com/board3.png',
+          buttons: [
+            {id: '1', image_id: '2'}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image3.png'}
+          ]
+        }),
+        id: '179'
+      });
+      var done = false;
+      persistence.sync(1340).then(function() {
+        done = true;
+      });
+      waitsFor(function() { return done; });
+      runs(function() {
+        expect(warnings).toEqual([]);
+        expect(stores.indexOf('http://example.com/pic.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/pic2.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/pic3.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/pic4.png')).toEqual(-1);
+        expect(stores.indexOf('http://example.com/board.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/board2.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/board3.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/image.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/image2.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/image3.png')).toNotEqual(-1);
+      });
+    });
+  });
+
+  it("should warn but not fail if a supervisee's data is irretrievable", function() {
+    db_wait(function() {
+      var stores = [];
+      var warnings = [];
+      stub(modal, 'warning', function(message) {
+        warnings.push(message);
+      });
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}},
+          supervisees: [
+            {id: '1', user_name: 'fiona'},
+            {id: '2', user_name: 'alastar'}
+          ]
+        }}),
+        id: "1340"
+      });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1', 
+          user_name: 'fiona', 
+          avatar_url: 'http://example.com/pic2.png',
+          preferences: {home_board: {id: '177'}},
+          supervisees: [
+            {id: '3', user_name: 'dwight'}
+          ]
+        }}),
+        id: "1"
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '145',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', sound_id: '3', load_board: {id: '167'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image.png'}
+          ],
+          sound: [
+            {id: '3', url: 'http://example.com/sound.mp3'}
+          ]
+        }),
+        id: '145'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '167',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '167'
+      });
+      queryLog.defineFixture({
+        method: 'GET', 
+        type: 'board',
+        response: Ember.RSVP.resolve({board: {
+          id: '178',
+          image_url: 'http://example.com/board.png',
+          buttons: [
+            {id: '1', image_id: '2', load_board: {id: '178'}}
+          ],
+          grid: {
+            rows: 1,
+            columns: 1,
+            order: [['1']]
+          }
+        },
+          image: [
+            {id: '2', url: 'http://example.com/image2.png'}
+          ]
+        }),
+        id: '178'
+      });
+      var done = false;
+      persistence.sync(1340).then(function() {
+        done = true;
+      });
+      waitsFor(function() { return done; });
+      runs(function() {
+        expect(warnings.indexOf("Couldn't sync boards for supervisee \"fiona\"")).toNotEqual(-1);
+        expect(warnings.indexOf("Couldn't sync boards for supervisee \"alastar\"")).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/pic.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/pic2.png')).toEqual(-1);
+        expect(stores.indexOf('http://example.com/pic3.png')).toEqual(-1);
+        expect(stores.indexOf('http://example.com/pic4.png')).toEqual(-1);
+        expect(stores.indexOf('http://example.com/board.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/board2.png')).toEqual(-1);
+        expect(stores.indexOf('http://example.com/board3.png')).toEqual(-1);
+        expect(stores.indexOf('http://example.com/image.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/image2.png')).toNotEqual(-1);
+        expect(stores.indexOf('http://example.com/image3.png')).toEqual(-1);
+      });
+    });
+  });
+  
+  it("should sync sidebar boards if defined", function() {
+    db_wait(function() {
+      var stores = [];
+      stub(persistence, 'store_url', function(url, type) {
+        stores.push(url);
+        console.log(url);
+        return Ember.RSVP.resolve({url: url});
+      });
+      stub(persistence, 'find_changed', function() { return Ember.RSVP.resolve([]); });
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: Ember.RSVP.resolve({user: {
+          id: '1340', 
+          user_name: 'fred', 
+          avatar_url: 'http://example.com/pic.png',
+          preferences: {home_board: {id: '145'}, sidebar_boards: [{key: 'maxine/sword'}, {}, {key: 'fred/bacon'}]}
+        }}),
+        id: "1340"
+      });
+      var found1 = false;
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: new Ember.RSVP.Promise(function(resolve) {
+          found1 = true;
+          return {board: {}};
+        }),
+        id: "maxine/sword"
+      });
+      var found2 = false;
+      queryLog.defineFixture({
+        method: 'GET',
+        type: 'user',
+        response: new Ember.RSVP.Promise(function(resolve) {
+          found2 = true;
+          return {board: {}};
+        }),
+        id: "fred/bacon"
+      });
+      var done = false;
+      persistence.sync(1340).then(null, function() {
+        done = true;
+      });
+      waitsFor(function() { return done; });
+      runs(function() {
+        expect(found1).toEqual(true);
+        expect(found2).toEqual(true);
+      });
+    });
+  });
+});

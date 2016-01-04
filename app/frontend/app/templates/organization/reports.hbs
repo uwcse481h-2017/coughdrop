@@ -1,0 +1,73 @@
+{{#if model.permissions.edit}}
+  {{#if available_reports}}
+    <form class="form-horizontal">
+      <div class="form-group">
+        <label for="report_type" class="col-sm-1 control-label">{{t "Report:" key='report_colon'}}</label>
+        <div class="col-sm-6">
+          {{bound-select select_class="form-control" select_id="report_type" content=available_reports selection=current_report action=(action (mut current_report)) }}
+        </div>
+      </div>
+    </form>
+    {{#if results.loading}}
+      <h2>
+        <span class="glyphicon glyphicon-refresh spinning"></span>&nbsp;&nbsp;
+        {{t "Loading..." key='loading'}}
+      </h2>
+    {{else if results}}
+      {{#if results.error}}
+        <p class='text-danger'>{{results.error}}</p>
+      {{/if}}
+      <div class="row">
+        <div class="col-sm-8">
+          <h2>
+            {{#if results.more}}
+              <span class="glyphicon glyphicon-refresh spinning"></span>&nbsp;
+            {{else}}
+              <span class="glyphicon glyphicon-th-list"></span>&nbsp;
+            {{/if}}
+            {{t "result" key='x_results' count=results.count}}
+          </h2>
+          <div class='list-group'>
+            {{#each results.list as |item|}}
+              {{#if item.started_at}}
+                <span class='list-group-item'>
+                  <span title="{{unbound date item.started_at}}">
+                    {{date_ago item.started_at}}
+                  </span>
+                  {{#link-to 'user.log' item.user.user_name log.id}}
+                    {{t "button" count=item.button_count key='button_count'}}
+                  {{/link-to}}
+                  <span> - 
+                    {{#link-to 'user' item.user.user_name}}
+                      {{item.user.user_name}}
+                    {{/link-to}}
+                  </span>
+                  <br/>
+                  <span style="color: #888; font-size: 10px; white-space: nowrap; overflow: hidden; display: block;">{{item.summary}}</span>
+                </span>
+              {{else}}
+                {{#link-to 'user' item.user_name class='list-group-item'}}
+                  <img src={{item.avatar_url}} style='height: 30px;'/>
+                  {{item.user_name}}
+                  {{#if item.email}}
+                    ({{item.email}})
+                  {{/if}}
+                {{/link-to}}
+              {{/if}}
+            {{/each}}
+            {{#each results.stats as |stat|}}
+              <a class='list-group-item' style='font-size: 18px;'>
+                <span style='display: inline-block; width: 90%;'>{{stat.key}}</span> <span class={{stat.label_class}}>{{stat.value}}</span>
+              </a>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+    {{else}}
+    {{/if}}
+  {{else}}
+    <p>{{t "No reports available yet" key='no_reports_available'}}</p>
+  {{/if}}
+{{else}}
+  <p>{{t "Not authorized" key='not_authorized'}}</p>
+{{/if}}

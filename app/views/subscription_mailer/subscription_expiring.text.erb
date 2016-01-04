@@ -1,0 +1,10 @@
+This is a notice that the user account "<%= @user.user_name %>" needs updated subscription information. There was an error handling the current subscription, either the card failed multiple times or the subscription was manually canceled, or something unexpected occurred.
+
+To address this problem please update your subscription settings in CoughDrop:
+
+<%= JsonApi::Json.current_host %>/<%= @user.user_name %>/subscription
+
+If you need more time on your trial or think this message was sent in error, please let us know and we'll help get to the bottom of things. Just access our support site (https://coughdrop.zendesk.com) to make a request.
+
+Thanks!
+-The CoughDrop Team

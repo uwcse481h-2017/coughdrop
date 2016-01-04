@@ -1,0 +1,56 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>
+      {{t "Find a Button" key='find_a_button'}}
+    </h3>
+  </div>
+  <div class="modal-body">
+    {{input type="text" id="button_search_string" value=searchString class="form-control" placeholder="Word or phrase you're looking for"}}
+    {{#if searchString}}
+      <div class="row" id="button_results">
+        {{#if results}}
+          {{#each results as |result|}}
+            <div {{action 'pick_result' result}} class="result col-sm-12">
+              <div class="img_holder">
+                <img src={{result.image}} onerror="button_broken_image(this);" />
+              </div>
+              {{result.label}}
+              <div class="location">
+                {{#if result.on_this_board}}
+                  {{t "On this board" key='on_this_board'}}
+                {{else}}
+                  {{t "Get there through: " key='get_there_through'}}
+                  {{#if result.pre_action}}
+                    <span class="link_list">{{t "Home" key='home'}}</span>
+                  {{/if}}
+                  {{#each result.pre_buttons as |pre|}}
+                    <span class="link_list">
+                      {{#if pre.label}}
+                        {{pre.label}}
+                      {{else}}
+                        {{pre.vocalization}}
+                      {{/if}}
+                    </span>
+                  {{/each}}
+                {{/if}}
+              </div>
+            </div>
+          {{/each}}
+        {{else}}
+          <div class="col-sm-12">
+            {{#if loading}}
+              {{t "Loading..." key='loading'}}
+            {{else}}
+              {{#if error}}
+                {{error}}
+              {{else}}
+                {{t "No buttons found" key='no_buttons_found'}}
+              {{/if}}
+            {{/if}}
+          </div>
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+{{/modal-dialog}}

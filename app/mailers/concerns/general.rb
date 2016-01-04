@@ -1,0 +1,20 @@
+module General
+  extend ActiveSupport::Concern
+  
+  def mail_message(user, subject, channel_type=nil)
+    channel_type ||= caller_locations(1,1)[0].label
+    user.channels_for(channel_type).each do |path|
+      mail(to: path, subject: "CoughDrop - #{subject}")
+    end
+  end  
+
+  module ClassMethods
+    def schedule_delivery(delivery_type, *args)
+      Worker.schedule(self, :deliver_message, delivery_type, *args)
+    end
+  
+    def deliver_message(method_name, *args)
+      self.send(method_name, *args).deliver
+    end
+  end
+end

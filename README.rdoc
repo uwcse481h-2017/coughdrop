@@ -1,0 +1,52 @@
+== README
+
+This README would normally document whatever steps are necessary to get the
+application up and running.
+
+Things you may want to cover:
+
+* Ruby version
+
+* System dependencies
+
+* Configuration
+
+* Database creation
+
+* Database initialization
+
+* How to run the test suite
+
+* Services (job queues, cache servers, search engines, etc.)
+
+* Deployment instructions
+
+* ...
+
+
+Please feel free to use a different markup language if you do not plan to run
+<tt>rake doc:app</tt>.
+
+
+Board:
+- id
+- content
+- export requires getting the data-uri for all the images and sounds... better to just keep in the db? ew.
+
+BoardChild:
+- id
+- parent_id
+- child_id
+
+Image:
+- id
+- board_id
+- open_symbols_id
+- file_path (images should be protected in case personal)
+- data_uri (to be used temporarily? go straight to s3? yesplz.)
+
+Sound:
+- id
+- board_id
+- file_path
+- data_uri (??)

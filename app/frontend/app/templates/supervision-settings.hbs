@@ -1,0 +1,84 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    <h3>{{t "Supervision Settings" key='supervision_settings'}}</h3>
+  </div>
+  <div class="modal-body">
+    <h3>{{t "My Supervisors" key='my_supervisors'}}</h3>
+    {{#if model.supervisors}}
+      <table class="table table-hover">
+        <tbody>
+        {{#if model.subscription.managing_org_name}}
+          <tr>
+            <td style="text-align: center; vertical-align: middle; font-size: 40px;">
+              <span class="glyphicon glyphicon-paperclip"></span>
+            </td>
+            <td>
+              <div style="font-size: 20px;">{{model.subscription.managing_org_name}}</div>
+              <span class="text-muted">{{t "organization managers (editing allowed)" key='org_managers_editing_allowed'}}</span>
+            </td>
+            <td style="width: 30px; font-size: 20px; vertical-align: middle;">
+              <a href='#' {{action "remove_supervisor" "org"}} class="glyphicon glyphicon-trash"><span class='text-hide'>delete</span></a>
+            </td>
+          </tr>
+        {{/if}}
+        {{#each model.supervisors as |supervisor|}}
+          <tr>
+            <td style="width: 60px;">
+              <img src={{supervisor.avatar_url}} style="height: 50px; width: 50px;"/>
+            </td>
+            <td>
+              <div style="font-size: 20px;">{{supervisor.name}}</div>
+              {{#link-to 'user' supervisor.user_name}}{{supervisor.user_name}}{{/link-to}}
+              {{#if supervisor.edit_permission}}
+                <span class="text-muted">{{t "(editing allowed)" key='editing_allowed'}}</span>
+              {{/if}}
+            </td>
+            <td style="width: 30px; font-size: 20px; vertical-align: middle;">
+              {{#if model.permissions.manage_supervision}}
+                <a href='#' {{action "remove_supervisor" supervisor.id}} class="glyphicon glyphicon-trash"><span class='text-hide'>delete</span></a>
+              {{/if}}
+            </td>
+          </tr>
+        {{/each}}
+        </tbody>
+      </table>
+    {{else}}
+      <p>{{t "None found" key='none_found'}}</p>
+    {{/if}}
+    {{#if model.permissions.manage_supervision}}
+      <button type='button' class='btn btn-default' {{action "add_supervisor"}}>{{t "Add Supervisor" key='add_supervisor'}}</button>
+    {{/if}}
+    <h3>{{t "People I Supervise" key='my_supervisees'}}</h3>
+    {{#if model.supervisees}}
+      <table class="table table-hover">
+        <tbody>
+        {{#each model.supervisees as |supervisee|}}
+          <tr>
+            <td style="width: 60px;">
+              <img src={{supervisee.avatar_url}} style="height: 50px; width: 50px;"/>
+            </td>
+            <td>
+              <div style="font-size: 20px;">{{supervisee.name}}</div>
+              {{#link-to 'user' supervisee.user_name}}{{supervisee.user_name}}{{/link-to}}
+              {{#if supervisee.edit_permission}}
+                <span class="text-muted">{{t "(editing allowed)" key='editing_allowed'}}</span>
+              {{/if}}
+            </td>
+            <td style="width: 30px; font-size: 20px; vertical-align: middle;">
+              {{#if model.permissions.manage_supervision}}
+                <a href='#' {{action "remove_supervisee" supervisee.id}} class="glyphicon glyphicon-trash"><span class='text-hide'>delete</span></a>
+              {{/if}}
+            </td>
+          </tr>
+        {{/each}}
+        </tbody>
+      </table>
+    {{else}}
+      <p>{{t "None found" key='none_found'}}</p>
+    {{/if}}
+  </div>    
+  <div class="modal-footer">
+    <a href="#" class="btn" {{action 'close'}}>{{t "Close" key='close'}}</a>
+  </div>
+{{/modal-dialog}}

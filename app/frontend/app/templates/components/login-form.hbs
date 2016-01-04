@@ -1,0 +1,61 @@
+<div class='row'>
+  {{#if stashes.enabled}}
+    <div class='col-md-offset-4 col-md-4 col-sm-offset-3 col-sm-6'>
+      <form {{action "authenticate" on='submit'}} autocomplete="off" class="form-horizontal" id="login_form">
+        <div class="form-group">
+          {{lowercase-text-field id='identification' class="form-control input-lg" value=identification placeholder='username'}}
+        </div>
+        <div class="form-group">
+          {{input type='password' id='password' class='form-control input-lg' value=password placeholder='password'}}
+        </div>
+        {{#unless browserless}}
+          <div class="form-group">
+            <div class="checkbox">
+              <label>
+                {{input type="checkbox" checked=long_token id="long_token"}}
+                Keep me logged in on this device
+              </label>
+            </div>
+          </div>
+        {{/unless}}
+        {{#if login_error}}
+          <div class="form-group">
+            <p class="text-danger">
+              {{ login_error }}
+            </p>
+          </div>
+        {{/if}}
+        <div class="form-group">
+          <button type="submit" class='btn btn-primary btn-lg' disabled={{noSubmit}}>
+            {{#if noSecret}}
+              {{t "Not Online" key='not_connected'}}
+            {{else}}
+              {{#if logging_in}}
+                {{t "Signing In..." key='logging_in'}}
+              {{else}}
+                {{#if logged_in}}
+                  {{t "Success! One Moment..." key='success'}}
+                {{else}}
+                  {{t "Sign In" key='login'}}
+                {{/if}}
+              {{/if}}
+            {{/if}}
+          </button>
+          <span style="padding-left: 10px;">
+            {{#if app_state.no_linky}}
+              {{#link-to 'forgot_login'}}{{t "need help logging in?" key='forgot_login'}}{{/link-to}}
+            {{else}}
+              {{#link-to 'forgot_password'}}{{t "forgot password" key='forgot_password'}}{{/link-to}} | 
+              {{#link-to 'register'}}{{t "sign up" key='register'}}{{/link-to}}
+            {{/if}}
+          </span>
+        </div>
+      </form>
+    </div>
+  {{else}}
+    <div class='col-sm-4 col-sm-offset-4'>
+      <h2>{{t "Can't Log In" key='cant_login'}}</h2>
+      {{partial "bad-privacy-settings"}}
+    </div>
+  {{/if}}
+</div>

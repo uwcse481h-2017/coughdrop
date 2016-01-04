@@ -1,0 +1,67 @@
+{{#modal-dialog action="close" opening='opening' closing='closing'}}
+  <div class="modal-header">
+    <button type="button" class="close" {{action 'close'}}>&times;</button>
+    {{#if model.for_editing}}
+      <h3>{{t "Edit a Copy of this Board" key='edit_a_copy_of_board'}}</h3>
+    {{else}}
+      <h3>{{t "Make a Copy of this Board" key='make_a_copy_of_board'}}</h3>
+    {{/if}}
+  </div>
+  <div class="modal-body">
+    {{#if model.supervisees}}
+      <p>{{t "For which user would you like to make a copy of this board? If you are planning to user this board for multiple communicators, you should probably copy it for yourself and manually add it for each communicator." key='which-user'}}</p>
+      {{partial "select-user"}}
+    {{/if}}
+    <p>
+      {{#if loading}}
+        {{t "Checking user..." key='checking_user'}}
+      {{else if error}}
+        {{t "User lookup failed, please try again" key='user_lookup_failed'}}
+      {{else if in_board_set}}
+        {{t "This board is part of the user's communication set. Do you want to use the new copy in the communication set instead of the original?" key='copy_upstream_board_links'}}
+        {{t "This action could make copies of other boards in the communication set as well." key='more_copies_warning'}}
+      {{else if linked}}
+        {{t "This board is linked to other boards. Do you want to make a copy of these linked boards as well, or just copy this board without changing any of the links?" key='copy_downstream_board_links'}}
+      {{/if}}
+    </p>
+    {{#if self_currently_selected}}
+      {{#if model.supervisees}}
+        <p>
+          {{t "Select any users to share this board and any links with them." key='select_sharing_supervisees'}}
+          <ul class='list-unstyled' style='margin-top: 10px; margin-left: 30px;'>
+            {{#each model.supervisees as |supervisee|}}
+              <li>
+                <label style={{if supervisee.share 'font-weight: bold;' 'font-weight: normal;'}}>
+                  {{input type='checkbox' checked=supervisee.share}}
+                  <img src={{supervisee.avatar_url}} style="height: 30px; max-width: 30px;"/>
+                  {{supervisee.user_name}}
+                </label>
+              </li>
+            {{/each}}
+          </ul>
+        </p>
+      {{/if}}
+    {{/if}}
+  </div>
+  
+  <div class="modal-footer">
+    {{#if in_board_set}}
+      <div class="btn-group">
+        <button class='btn btn-primary dropdown-toggle' data-toggle="dropdown" aria-expanded="false">
+          {{t "Copy Into the Communication Set" key='use_new_copy'}} <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+          <li><a href="#" {{action 'tweakBoard' "modify_links_update"}}><strong>{{t "Update Linked Boards In-Place" key='update_in_place'}}</strong></a></li>
+          <li><a href="#" {{action 'tweakBoard' "modify_links_copy"}}>{{t "Make Brand New Copies of Linked Boards" key='update_replace'}}</a></li>
+        </ul>
+      </div>
+      <button class='btn btn-default' {{action 'tweakBoard' "keep_links"}}>{{t "Copy Just This Board" key='copy_just_this_board'}}</button>
+    {{else if linked}}
+      <button class='btn btn-primary' {{action 'tweakBoard' "links_copy"}}>{{t "Copy Linked Boards Too" key='copy_linked_boards'}}</button>
+      <button class='btn btn-default' {{action 'tweakBoard' "keep_links"}}>{{t "Copy Just This Board" key='copy_just_this_board'}}</button>
+    {{else}}
+      <button class='btn btn-primary' {{action 'tweakBoard' "keep_links"}}>{{t "Copy This Board" key='copy_this_board'}}</button>
+    {{/if}}
+    <button class='btn btn-default' {{action 'close'}}>{{t "Cancel" key='cancel'}}</button>
+  </div>
+{{/modal-dialog}}

@@ -1,0 +1,141 @@
+{{#if model.full_premium}}
+  <h2>
+    {{#if messages_only}}
+      {{t "Messages about" key='messages_about'}} {{model.user_name}}
+    {{else}}
+      {{t "Logs for" key='logs_for'}} {{model.user_name}}
+    {{/if}}
+    {{#if filtered_results}}
+      {{t "(filtered)" key='filtered'}}
+      <span style='font-size: 12px; padding-left: 5px;'>
+      {{#link-to 'user.logs' model.user_name (query-params type=type start='' end='' device_id='' location_id='')}}
+        {{t "clear filter" key='clear_filter'}}
+      {{/link-to}}
+      </span>
+    {{else}}
+      <span style='font-size: 12px; padding-left: 5px;'>
+        {{#if all_logs}}
+          {{#link-to 'user.logs' model.user_name (query-params type='note')}}{{t "Show Only Messages" key='show_only_messages'}}{{/link-to}}
+        {{else}}
+          {{#link-to 'user.logs' model.user_name (query-params type='all')}}{{t "Show Full Log" key='show_full_log'}}{{/link-to}}
+        {{/if}}
+      </span>
+    {{/if}}
+
+  </h2>
+  {{#if logs.loading}}
+    <p>{{t "Loading..." key='loading...'}}</p>
+  {{else if logs.error}}
+    <p>{{t "Failed to load" key='failed_to_load'}}</p>
+  {{else if logs}}
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered">
+        <thead>
+          <tr>
+            <th></th>
+            <th>{{t "Summary" key='summary'}}</th>
+            {{#unless messages_only}}
+              <th>{{t "Duration" key='duration'}}</th>
+              <th>{{t "Notes" key='notes'}}</th>
+            {{/unless}}
+            <th>{{t "Date" key='date'}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each logs as |log|}}
+            <tr>
+              <td>
+                {{#link-to 'user.log' user.user_name log.id}}
+                  {{#if log.note_type}}
+                    <span class="glyphicon glyphicon-envelope"></span>
+                    <span class="sr-only">{{t "message" key='message'}}</span>
+                  {{else if log.assessment_type}}
+                    <span class="glyphicon glyphicon-list-alt"></span>
+                    <span class="sr-only">{{t "assessment" key='assessment'}}</span>
+                  {{else}}
+                    <span class="glyphicon glyphicon-time"></span>
+                    <span class="sr-only">{{t "session" key='session'}}</span>
+                  {{/if}}
+                {{/link-to}}
+              </td>
+              <td style="font-size: 12px; width: 100%;">
+                {{#if log.note_type}}
+                  <div style="font-size: 10px; color: #888;">
+                    {{t "Note by" key='note_by'}}
+                    {{log.author.user_name}}
+                  </div>
+                  <span style="white-space: pre-line;">{{log.note.text}}</span>
+                {{else if log.assessment_type}}
+                  <div style="font-size: 10px; color: #888;">
+                    {{t "Assessment by" key='assessment_by'}}
+                    {{log.author.user_name}}
+                  </div>
+                  {{log.assessment.description}}<br/>
+                  {{log.assessment.summary}}
+                {{else}}
+                  <span style="white-space: pre-line;">{{log.summary}}</span>
+                {{/if}}
+              </td>
+              {{#unless messages_only}}
+                <td style="white-space: nowrap;">
+                  {{#link-to 'user.log' user.user_name log.id}}
+                    {{#if log.note_type}}
+                      ...
+                    {{else}}
+                      {{t "minute" key='minute' count=log.minutes}}
+                    {{/if}}
+                  {{/link-to}}
+                </td>
+                <td>
+                  {{#if log.event_note_count}}
+                    {{#link-to 'user.log' model.user_name log.id}}
+                      <span class="label label-primary">{{log.event_note_count}}</span>
+                    {{/link-to}}
+                  {{/if}}
+                </td>
+              {{/unless}}
+              <td style="white-space: nowrap;">{{date log.started_at}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{#if more_available}}
+      <button class="btn btn-default" {{action "more"}}>{{t "More" key='more'}}</button>
+    {{/if}}
+  {{else}}
+    <p>{{t "No records currently available" key='no_logs_found'}}</p>
+  {{/if}}
+  {{#if all_logs}}
+    <!-- TODO
+    <button class="btn btn-default" {{action "exportLogs"}}>{{t "Export Logs" key='export_logs'}}</button>
+    -->
+    {{#if model.permissions.edit}}
+      <button class='btn btn-small btn-default' {{action "recordNote" "text"}}>{{t "New Note" key='new_note'}}</button>
+      {{#if app_state.feature_flags.assessments}}
+        <button class='btn btn-small btn-default' {{action "quick_assessment"}}>{{t "Quick Assessment" key='quick_assessment'}}</button>
+      {{/if}}
+    {{/if}}
+    <button class="btn btn-default" {{action "clearLogs"}}>{{t "Clear All Logs" key='clear_all_logs'}}</button>
+  {{else}}
+    {{#if messages_only}}
+      {{#if model.permissions.edit}}
+        <button class='btn btn-small btn-default' {{action "recordNote" "text"}}>{{t "New Note" key='new_note'}}</button>
+        {{#if app_state.feature_flags.assessments}}
+          <button class='btn btn-small btn-default' {{action "quick_assessment"}}>{{t "Quick Assessment" key='quick_assessment'}}</button>
+        {{/if}}
+      {{/if}}
+    {{/if}}
+  {{/if}}
+{{else}}
+  <h2>{{t "Premium Membership Required" key='premium_required'}}</h2>
+  <p>
+    {{t "CoughDrop is a powerful, flexible communication tool with lots of great features. Some features, including this one, are only available to users who have purchased a premium subscription. Please " key='purchase_subscription_1'}}
+    {{#if app_state.feature_flags.subscriptions}}
+      {{#link-to 'user.subscription' model.user_name}}{{t "purchase a premium subscription" key='purchase_subscription_2'}}{{/link-to}}
+    {{else}}
+      {{t "purchase a premium subscription" key='purchase_subscription_2'}}
+    {{/if}}
+    {{t "to support this good cause and to unlock this feature." key='purchase_subscription_3'}}
+  </p>
+{{/if}}

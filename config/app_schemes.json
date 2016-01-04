@@ -1,0 +1,14 @@
+{
+  "ios": {
+    "com.facebook.Facebook": "fb://feed",
+    "com.atebits.Tweetie2": "twitter://timeline",
+    "com.nestlabs.jasper.release": "nesthome://",
+    "com.burbn.instagram": "instagram://app"
+  },
+  "android": {
+    "com.facebook.katana": "fb://feed",
+    "com.twitter.android": "twitter://timeline",
+    "com.nestlabs.android": "nest_thermostat://",
+    "com.instagram.android": "http://instagram.com"
+  }
+}

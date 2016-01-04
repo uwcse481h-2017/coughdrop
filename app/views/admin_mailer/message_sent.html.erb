@@ -1,0 +1,11 @@
+The following message was just sent using the "Contact Us" form:<br/><br/>
+Name: <%= @message.settings['name'] %><br/>
+Email: <%= @message.settings['email'] %><br/>
+Subject: <%= @message.settings['subject'] %><br/>
+Recipient: <%= @message.settings['recipient'] %><br/>
+Message:<br/><br/>
+
+<%= @message.settings['message'] %><br/><br/>
+
+Thanks!<br/>
+-The CoughDrop Team

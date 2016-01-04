@@ -1,0 +1,9 @@
+language: ruby
+rvm:
+  - "2.1.1"
+# uncomment this line if your project needs to run something other than `rake`:
+script: bundle exec rspec spec && bundle exec guard-jasmine --server-timeout=60
+
+before_install:
+  - sudo apt-get install -y postgresql-server-dev-all
+  - sudo apt-get install phantomjs
