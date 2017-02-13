@@ -159,7 +159,11 @@ export default Ember.Controller.extend({
     });
   }.observes('app_state.speak_mode', 'app_state.edit_mode', 'model.word_suggestions', 'model.description', 'app_state.sidebar_pinned', 'app_state.currentUser.preferences.word_suggestion_images', 'text_position'),
   board_style: function() {
-    return new Ember.String.htmlSafe("position: relative; height: " + (this.get('height') + 5) + "px");
+    // Position the board at the correct height with regard to the header, and also
+    // give it a white background (TODO check if this can be set by preferences otherwise)
+    // so that slideout animation functions properly.
+    return new Ember.String.htmlSafe("position: relative; height: " + (this.get('height') + 5) + "px;" +
+      "background-color: white");
   }.property('height'),
   redraw_if_needed: function() {
     var now = (new Date()).getTime();
