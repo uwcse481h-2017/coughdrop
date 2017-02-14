@@ -551,9 +551,11 @@
   </div>
 </header>
 <div id="content" class={{content_class}}>
-  {{board-editor-slideout actionReceiver=boardEditorSlideout}} <!-- The slideout containing a checklist of words in board.
+  {{board-editor-slideout id="menu" actionReceiver=boardEditorSlideout}} <!-- The slideout containing a checklist of words in board.
                                  Visible only in edit mode on a board.-->
-  {{ outlet }}
+  <div id="slideout-main-panel" style="overflow: visible">
+    {{ outlet }}
+  </div>
 </div>
 {{#if app_state.sidebar_visible}}
   <div id="sidebar" style={{sidebar_style}} class="advanced_selection">
