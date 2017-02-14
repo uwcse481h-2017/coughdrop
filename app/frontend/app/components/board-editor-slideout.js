@@ -24,7 +24,7 @@ export default Ember.Component.extend(InboundActions, {
 
     // Set the content of the slideout to appear below the header.
     // When in edit-mode, the header is 70px wide.
-    // TODO: make this a constant, or dynamically decide based on just the 
+    // TODO: make this a constant, or dynamically decide based on just the
     // edit header.
     Ember.$('#menu').css('padding-top', '70px');
   },

@@ -551,8 +551,11 @@
   </div>
 </header>
 <div id="content" class={{content_class}}>
-  {{board-editor-slideout id="menu" actionReceiver=boardEditorSlideout}} <!-- The slideout containing a checklist of words in board.
-                                 Visible only in edit mode on a board.-->
+  <!-- The slideout containing a checklist of words in board.
+  Visible only in edit mode on a board.-->
+  {{board-editor-slideout id="menu" buttons=edited_board_buttons actionReceiver=boardEditorSlideout}}
+  <!-- A wrapper manel for the body of the website, to be pushed to the right
+  when the slideout opens in edit mode -->
   <div id="slideout-main-panel" style="overflow: visible">
     {{ outlet }}
   </div>
