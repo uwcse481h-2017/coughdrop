@@ -126,11 +126,17 @@
       {{else}}
         <!-- A button to open and close the board-editor-slideout, which contains a checklist
         of words available on buttons in the board.-->
-        <button class="toggle-slideout-button"><span class='wide'>{{t "&nbsp;&nbsp;Reveal Sidebar&nbsp;&nbsp;" key="reveal_sidebar"}}</span><span class='skinny glyphicon glyphicon-hand-up'></span></button>
-        <button class={{no_paint_mode_class}} {{action "noPaint"}}><span class='wide'>{{t "&nbsp;&nbsp;Edit&nbsp;&nbsp;" key="edit"}}</span><span class='skinny glyphicon glyphicon-hand-up'></span></button>
+        <button class="toggle-slideout-button" {{action "toggleBoardEditorSlideout"}}>
+          <span class='wide'>{{t "&nbsp;&nbsp;Reveal Sidebar&nbsp;&nbsp;" key="reveal_sidebar"}}</span>
+        </button>
+        <button class={{no_paint_mode_class}} {{action "noPaint"}}>
+          <span class='wide'>{{t "&nbsp;&nbsp;Edit&nbsp;&nbsp;" key="edit"}}</span>
+          <span class='skinny glyphicon glyphicon-hand-up'></span>
+        </button>
         <span class="dropdown" style="display: inline-block;">
           <button class={{paint_mode_class}} data-toggle="dropdown">
-            <span class="wide">{{t "Paint" key="paint"}}</span><span class="skinny glyphicon glyphicon-tint"></span>
+            <span class="wide">{{t "Paint" key="paint"}}</span>
+            <span class="skinny glyphicon glyphicon-tint"></span>
             {{#if board.paint_mode}}
               {{{board.paintColor}}}
             {{/if}}
@@ -545,7 +551,7 @@
   </div>
 </header>
 <div id="content" class={{content_class}}>
-  {{board-editor-slideout}} <!-- The slideout containing a checklist of words in board.
+  {{board-editor-slideout actionReceiver=boardEditorSlideout}} <!-- The slideout containing a checklist of words in board.
                                  Visible only in edit mode on a board.-->
   {{ outlet }}
 </div>

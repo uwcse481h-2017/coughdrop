@@ -56,6 +56,10 @@ export default Ember.Controller.extend({
     return modal.open('copying-board', {board: oldBoard, action: decision.action, user: decision.user, shares: decision.shares, make_public: decision.make_public, translate_locale: decision.translate_locale});
   },
   actions: {
+    // Open/close the board editor slideout when visible.
+    toggleBoardEditorSlideout: function() {
+      this.get('boardEditorSlideout').send('toggleSlideout');
+    },
     invalidateSession: function() {
       session.invalidate(true);
     },
