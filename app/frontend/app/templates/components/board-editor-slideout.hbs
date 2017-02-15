@@ -1,17 +1,17 @@
 <nav>
   <h4>Quick Edit</h4>
-  {{#if buttons}}
-    {{#each buttons as |row|}}
-      {{#each row as |button|}}
-        {{#unless button.empty}}
-          <div>
-            <label style="font-weight: normal;">
-              {{input type="checkbox" checked=true}}
-              {{button.label}}
-            </label>
-          </div>
-        {{/unless}}
-      {{/each}}
+  {{#each buttons as |row|}}
+    {{#each row as |button|}}
+      {{#unless button.empty}}
+        <div>
+          <label style="font-weight: normal;">
+            <span role=button class="remove-button" aria-label="Remove Word">
+              <span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span>
+            </span>
+            {{button.label}}
+          </label>
+        </div>
+      {{/unless}}
     {{/each}}
-  {{/if}}
+  {{/each}}
 </nav>
