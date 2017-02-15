@@ -15,22 +15,7 @@ import Button from '../utils/button';
 
 export default Ember.Controller.extend({
   board: Ember.inject.controller('board.index'),
-  edited_board_buttons: Ember.computed(function() {
-    //if (app_state.get('edit_mode') && editManager.controller) {
-      return editManager.controller.get('ordered_buttons');
-    //}
-    //console.log('in edit board buttons');
-    //console.log('app state', app_state.edit_mode);
-    //return null;
-  }),
-  /*editing: Ember.computed(function() {
-    app_state.get('edit_mode');
-  }),
-  editing_observer: Ember.observer('editing', function() {
-    if (this.get('editing') && !this.get('edited_board_buttons')) {
-      this.set('edited_board_buttons', editManager.controller.get('ordered_buttons'));
-    }
-  }),*/
+  toggleSlideoutService: Ember.inject.service('toggle-slideout-service'),
   updateTitle: function(str) {
     if(!Ember.testing) {
       if(str) {
@@ -74,7 +59,7 @@ export default Ember.Controller.extend({
   actions: {
     // Open/close the board editor slideout when visible.
     toggleBoardEditorSlideout: function() {
-      this.get('boardEditorSlideout').send('toggleSlideout');
+      this.get('toggleSlideoutService').emitToggleSlideout();
     },
     invalidateSession: function() {
       session.invalidate(true);
