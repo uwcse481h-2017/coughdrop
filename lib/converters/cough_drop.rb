@@ -360,4 +360,16 @@ module Converters::CoughDrop
     json = to_external(board)
     OBF::External.to_png(json, dest_path)
   end
+
+  def self.from_csv(csv_text, opts)
+    order = []
+    csv_text.split('\n').each do |csv_button|
+      button_attrs = csv_button.split(',')
+      button = {}
+      button['id'] = button_attrs[0]
+      order.append(button_attrs[0])
+      button['label'] = button_attrs[1]
+      button['vocalization'] = button_attrs[2]
+    end
+  end
 end
