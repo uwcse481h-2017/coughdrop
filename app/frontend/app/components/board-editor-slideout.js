@@ -19,7 +19,6 @@ export default Ember.Component.extend(InboundActions, {
       'tolerance': 70
     });
 
-
     // Append this to the component.
     this.set('slideout', newSlideout);
 
@@ -28,11 +27,6 @@ export default Ember.Component.extend(InboundActions, {
     // TODO: make this a constant, or dynamically decide based on just the
     // edit header.
     Ember.$('#menu').css('padding-top', '70px');
-
-    // TODO figure out how to access correct button.
-    Ember.$('.remove-button').click(function(e) {
-      self.get('removeButton')();
-    });
   },
   // Open/close the slideout.
   toggleSlideout: function() {
@@ -45,8 +39,10 @@ export default Ember.Component.extend(InboundActions, {
   unsubscribeToService: Ember.on('willDestroyElement', function () {
     this.get('toggleSlideoutService').off('toggleSlideout', this, this.toggleSlideout);
   }),
-  removeButton: function() {
-    // TODO add logic to remove a button
-    console.log('clicked worked');
+  actions: {
+    removeButton: function() {
+      // TODO add logic to remove a button
+      console.log('clicked worked');
+    }
   }
 });
