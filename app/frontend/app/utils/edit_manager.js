@@ -253,8 +253,38 @@ var editManager = Ember.Object.extend({
     // Should auto create a new board with a link arrow button.
     // Until then, will alert the user that they need to make more room.
     if (!foundHole) {
-      alert('Sorry, you have ran out of room on this board! Please either add more '
-        + 'rows and columns, or link to a new board.');
+      alert('Sorry, you have ran out of room on this board! Please either add more rows and columns, or link to a new board.');
+    }
+  },
+  // Sorts buttons so that the filled ones are in the front, and empty ones at the
+  // end of a list.
+  remove_empty_holes: function() {
+    // Flatten array.
+    var list = [];
+    var ob = this.controller.get('ordered_buttons') || [];
+    for(var idx = 0; idx < ob.length; idx++) {
+      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
+        var button = ob[idx][jdx];
+        list.push(button);
+      }
+    }
+    // Selection Sort
+    var i = 0;
+    var j = 0;
+    var n = list.length;
+    // filled < empty, comes first.
+    // Move each button one by one
+    for (j = 0; j < n-1; j++) {
+      // If button is empty, try to swap it.
+      if (this.button_is_empty(list[j])) {
+        // Search for next non-empty button. Swap when find it.
+        for (i = j+1; i < n; i++) {
+          if (!this.button_is_empty(list[i])) {
+              this.switch_buttons(list[j].id, list[i].id);
+              break;
+          }
+        }
+      }
     }
   },
   clear_button: function(id) {
