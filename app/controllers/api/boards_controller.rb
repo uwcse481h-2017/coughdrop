@@ -276,12 +276,9 @@ class Api::BoardsController < ApplicationController
       render json: JsonApi::Progress.as_json(progress, :wrapper => true).to_json
     else
       type = (
-      if params['type'] == 'obz' then
-        'obz'
-      elsif params['type'] == 'csv' then
-        'csv'
-      else
-        'obf'
+      if params['type'] == 'obz' then 'obz'
+      elsif params['type'] == 'csv' then 'csv'
+      else 'obf'
       end)
       remote_path = "imports/boards/#{@api_user.global_id}/upload-#{Security.nonce('filename')}.#{type}"
       content_type = "application/#{type}"
