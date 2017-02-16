@@ -5,7 +5,7 @@
       {{#unless button.empty}}
         <div>
           <label style="font-weight: normal;">
-            <span role=button class="remove-button" aria-label="Remove Word" onclick={{(action "removeButton")}}>
+            <span role=button class="remove-button" aria-label="Remove Word" onclick={{action "removeButton" button}}>
               <span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span>
             </span>
             {{button.label}}

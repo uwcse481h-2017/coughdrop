@@ -2,7 +2,7 @@ import Ember from 'ember';
 import InboundActions from '../../ember-component-inbound-actions/inbound-actions';
 
 export default Ember.Component.extend(InboundActions, {
-  toggleSlideoutService: Ember.inject.service('toggle-slideout-service'),
+  slideoutService: Ember.inject.service('slideout-service'),
   init: function() {
     this._super();
     this.set('slideout', null); // This will eventually hold our slideout.
@@ -34,15 +34,17 @@ export default Ember.Component.extend(InboundActions, {
   },
   // Handle subscription to the toggle-slideout-service
   subscribeToService: Ember.on('init', function() {
-    this.get('toggleSlideoutService').on('toggleSlideout', this,  this.toggleSlideout);
+    this.get('slideoutService').on('toggleSlideout', this,  this.toggleSlideout);
   }),
   unsubscribeToService: Ember.on('willDestroyElement', function () {
-    this.get('toggleSlideoutService').off('toggleSlideout', this, this.toggleSlideout);
+    this.get('slideoutService').off('toggleSlideout', this, this.toggleSlideout);
   }),
   actions: {
-    removeButton: function() {
+    removeButton: function(button) {
       // TODO add logic to remove a button
       console.log('clicked worked');
+      console.log(button);
+      this.get('slideoutService').emitRemoveButton(button)
     }
   }
 });
