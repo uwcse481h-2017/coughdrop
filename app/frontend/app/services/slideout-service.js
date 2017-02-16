@@ -14,5 +14,8 @@ export default Ember.Service.extend(Ember.Evented, {
   // Notify the listener to add the button with the given label.
   emitAddButton: function(buttonLabel) {
     this.trigger('slideoutAddButton', buttonLabel);
+  },
+  emitNewRearrangePreference: function(preference) {
+    this.trigger('setRearrangeButtonsPreference', preference);
   }
 });

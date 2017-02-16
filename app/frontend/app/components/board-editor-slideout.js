@@ -6,6 +6,7 @@ export default Ember.Component.extend(InboundActions, {
   init: function() {
     this._super();
     this.set('slideout', null); // This will eventually hold our slideout.
+    this.set('doRearrangeButtons', false);
   },
   // Set up slideout element once the DOM has been built and elements are accessible.
   didInsertElement: function() {
@@ -60,6 +61,12 @@ export default Ember.Component.extend(InboundActions, {
     // Add the given label to a button upon enter key press of input.
     addButton: function(buttonLabel, self) {
       self.get('slideoutService').emitAddButton(buttonLabel);
+    },
+    // Set whether buttons should be rearranged upon edit, based on
+    // user's selection.
+    setRearrangePreference: function(preference) {
+      this.set('doRearrangeButtons', preference);
+      this.get('slideoutService').emitNewRearrangePreference(preference);
     }
   }
 });
