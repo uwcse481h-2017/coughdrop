@@ -59,8 +59,10 @@ export default Ember.Component.extend(InboundActions, {
       this.get('slideoutService').emitRemoveButton(button.id);
     },
     // Add the given label to a button upon enter key press of input.
+    // Reset input box to empty upon submission of label.
     addButton: function(buttonLabel, self) {
       self.get('slideoutService').emitAddButton(buttonLabel);
+      Ember.$('#add-word-input').val('');
     },
     // Set whether buttons should be rearranged upon edit, based on
     // user's selection.

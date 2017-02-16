@@ -234,6 +234,29 @@ var editManager = Ember.Object.extend({
     }
     return null;
   },
+  // Sets the first empty button found in the list (left to right,
+  // top to bottom) to have the given label.
+  add_button_at_next_empty: function(newLabel) {
+    var ob = this.controller.get('ordered_buttons') || [];
+    var foundHole = false;
+    for(var idx = 0; idx < ob.length; idx++) {
+      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
+        var button = ob[idx][jdx];
+        if(this.button_is_empty(button) && !foundHole) {
+          this.change_button(button.id, {'label': newLabel});
+          foundHole = true;
+          break;
+        }
+      }
+    }
+    // TODO handle case where there are no more empty buttons on the board.
+    // Should auto create a new board with a link arrow button.
+    // Until then, will alert the user that they need to make more room.
+    if (!foundHole) {
+      alert('Sorry, you have ran out of room on this board! Please either add more '
+        + 'rows and columns, or link to a new board.');
+    }
+  },
   clear_button: function(id) {
     var opts = {};
     for(var idx = 0; idx < editManager.Button.attributes.length; idx++) {
