@@ -40,11 +40,13 @@ export default Ember.Component.extend(InboundActions, {
     this.get('slideoutService').off('toggleSlideout', this, this.toggleSlideout);
   }),
   actions: {
+    // When the remove x button is clicked in the slideout, send an event
+    // to the board to clear the given button.
+    //
+    // TODO: not only clear the button, but also remove it and shift over
+    // the other existing buttons.
     removeButton: function(button) {
-      // TODO add logic to remove a button
-      console.log('clicked worked');
-      console.log(button);
-      this.get('slideoutService').emitRemoveButton(button)
+      this.get('slideoutService').emitRemoveButton(button);
     }
   }
 });

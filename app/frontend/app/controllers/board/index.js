@@ -16,6 +16,7 @@ var cached_images = {};
 var last_redraw = (new Date()).getTime();
 
 export default Ember.Controller.extend({
+  slideoutService: Ember.inject.service('slideout-service'),
   title: function() {
     var name = this.get('model.name');
     var title = "Board";
@@ -666,6 +667,15 @@ export default Ember.Controller.extend({
       }, function() { });
     }
   }.observes('persistence.online'),
+  // Handles subscriptions to incoming events regarding he board editor slideout
+  // through the slideoutService. Currently handles removing a button based on the
+  // label indicated to remove in the slideout.
+  subscribeToService: Ember.on('init', function() {
+    this.get('slideoutService').on('slideoutRemoveButton', this, this.actions.clear_button);
+  }),
+  unsubscribeToService: Ember.on('willDestroy', function () {
+    this.get('slideoutService').off('slideoutRemoveButton', this, this.actions.clear_button);
+  }),
   actions: {
     boardDetails: function() {
       modal.open('board-details', {board: this.get('model')});
@@ -725,6 +735,7 @@ export default Ember.Controller.extend({
     rearrangeButtons: function(dragId, dropId) {
       editManager.switch_buttons(dragId, dropId);
     },
+    // Empties the contents of a button.
     clear_button: function(id) {
       editManager.clear_button(id);
     },
