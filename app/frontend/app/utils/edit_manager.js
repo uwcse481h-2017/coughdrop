@@ -132,6 +132,15 @@ var editManager = Ember.Object.extend({
     if(!this.controller) { return; }
     var lastState = this.get('history').popObject();
     if(lastState) {
+      // Check which buttons are empty, and reapply
+      // empty property if so.
+      lastState.map(function(row) {
+        row.map(function(button) {
+          if (this.button_is_empty(button)) {
+            button.set('empty', true);
+          }
+        }, this);
+      }, this);
       var currentState = this.clone_state();
       this.get('future').pushObject(currentState);
       this.controller.set('ordered_buttons', lastState);
@@ -141,6 +150,15 @@ var editManager = Ember.Object.extend({
     if(!this.controller) { return; }
     var state = this.get('future').popObject();
     if(state) {
+      // Check which buttons are empty, and reapply
+      // empty property if so.
+      state.map(function(row) {
+        row.map(function(button) {
+          if (this.button_is_empty(button)) {
+            button.set('empty', true);
+          }
+        }, this);
+      }, this);
       var currentState = this.clone_state();
       this.get('history').pushObject(currentState);
       this.controller.set('ordered_buttons', state);
@@ -240,9 +258,16 @@ var editManager = Ember.Object.extend({
       console.log("no button found for: " + id);
     }
   },
+  // Returns whether a button is empty or not.
+  // Empty is defined as having no image nor label.
+  button_is_empty: function(button) {
+    return !button.label && !button.image_id;
+  },
+  // Check to see if a button is empty, and if so, set it to be empty.
+  // This sets empty on buttons currently in model.
   check_button: function(id) {
     var button = this.find_button(id);
-    var empty = !button.label && !button.image_id;
+    var empty = this.button_is_empty(button);
     Ember.set(button, 'empty', !!empty);
   },
   stash_button: function(id) {
