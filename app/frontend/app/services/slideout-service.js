@@ -8,7 +8,11 @@ export default Ember.Service.extend(Ember.Evented, {
   },
   // Notify the listener to remove the button whose label's (x) removal
   // button was clicked in the slideout.
-  emitRemoveButton: function(button) {
-    this.trigger('slideoutRemoveButton', button.id);
+  emitRemoveButton: function(buttonId) {
+    this.trigger('slideoutRemoveButton', buttonId);
+  },
+  // Notify the listener to add the button with the given label.
+  emitAddButton: function(buttonLabel) {
+    this.trigger('slideoutAddButton', buttonLabel);
   }
 });

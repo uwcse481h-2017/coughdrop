@@ -6,7 +6,7 @@
         <div>
           <label style="font-weight: normal;">
             <span role=button class="remove-button" aria-label="Remove Word" onclick={{action "removeButton" button}}>
-              <span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span>
+              <span class="glyphicon glyphicon-minus-sign" aria-hidden="true"></span>
             </span>
             {{button.label}}
           </label>
@@ -14,4 +14,9 @@
       {{/unless}}
     {{/each}}
   {{/each}}
+  <span aria-label="Add Word">
+    <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+  </span>
+  {{input id="add-word-input" type="text" aria-label="Enter new word here"
+  placeholder="Enter new word..."}}
 </nav>

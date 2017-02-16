@@ -27,6 +27,15 @@ export default Ember.Component.extend(InboundActions, {
     // TODO: make this a constant, or dynamically decide based on just the
     // edit header.
     Ember.$('#menu').css('padding-top', '70px');
+
+    // Set addButton action on enter keypress for input
+    Ember.$('#add-word-input').keypress(function(e) {
+      var code = (e.keyCode ? e.keyCode : e.which);
+      if(code == 13) {
+        e.stopPropagation();
+        self.actions.addButton(e.target.value, self);
+      }
+    });
   },
   // Open/close the slideout.
   toggleSlideout: function() {
@@ -46,7 +55,11 @@ export default Ember.Component.extend(InboundActions, {
     // TODO: not only clear the button, but also remove it and shift over
     // the other existing buttons.
     removeButton: function(button) {
-      this.get('slideoutService').emitRemoveButton(button);
+      this.get('slideoutService').emitRemoveButton(button.id);
+    },
+    // Add the given label to a button upon enter key press of input.
+    addButton: function(buttonLabel, self) {
+      self.get('slideoutService').emitAddButton(buttonLabel);
     }
   }
 });

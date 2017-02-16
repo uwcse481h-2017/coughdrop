@@ -670,11 +670,17 @@ export default Ember.Controller.extend({
   // Handles subscriptions to incoming events regarding he board editor slideout
   // through the slideoutService. Currently handles removing a button based on the
   // label indicated to remove in the slideout.
+  test_fn: function() {
+    console.log('here');
+  },
   subscribeToService: Ember.on('init', function() {
     this.get('slideoutService').on('slideoutRemoveButton', this, this.actions.clear_button);
+    this.get('slideoutService').on('slideoutAddButton', this, this.test_fn);
   }),
   unsubscribeToService: Ember.on('willDestroy', function () {
     this.get('slideoutService').off('slideoutRemoveButton', this, this.actions.clear_button);
+    this.get('slideoutService').off('slideoutAddButton', this, this.test_fn);
+
   }),
   actions: {
     boardDetails: function() {
