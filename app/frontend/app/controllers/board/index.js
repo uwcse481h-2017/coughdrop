@@ -16,6 +16,7 @@ var cached_images = {};
 var last_redraw = (new Date()).getTime();
 
 export default Ember.Controller.extend({
+  slideoutService: Ember.inject.service('slideout-service'),
   title: function() {
     var name = this.get('model.name');
     var title = "Board";
@@ -666,6 +667,28 @@ export default Ember.Controller.extend({
       }, function() { });
     }
   }.observes('persistence.online'),
+  // Add a button with the given label to the next available empty space on the board.
+  // TODO: But if rearranging is prefered, will be next in order after others, there
+  // will be no spaces between consecutive buttons.
+  add_next_button_by_label: function(label) {
+    editManager.add_button_at_next_empty(label);
+  },
+  test_fn2: function(preference) {
+    console.log('here2 ', preference);
+  },
+  // Handles subscriptions to incoming events regarding he board editor slideout
+  // through the slideoutService. Currently handles removing a button based on the
+  // label indicated to remove in the slideout.
+  subscribeToService: Ember.on('init', function() {
+    this.get('slideoutService').on('slideoutRemoveButton', this, this.actions.clear_button);
+    this.get('slideoutService').on('slideoutAddButton', this, this.add_next_button_by_label);
+    this.get('slideoutService').on('setRearrangeButtonsPreference', this, this.test_fn2);
+  }),
+  unsubscribeToService: Ember.on('willDestroy', function () {
+    this.get('slideoutService').off('slideoutRemoveButton', this, this.actions.clear_button);
+    this.get('slideoutService').off('slideoutAddButton', this, this.add_next_button_by_label);
+    this.get('slideoutService').off('setRearrangeButtonsPreference', this, this.test_fn2);
+  }),
   actions: {
     boardDetails: function() {
       modal.open('board-details', {board: this.get('model')});
@@ -725,6 +748,7 @@ export default Ember.Controller.extend({
     rearrangeButtons: function(dragId, dropId) {
       editManager.switch_buttons(dragId, dropId);
     },
+    // Empties the contents of a button.
     clear_button: function(id) {
       editManager.clear_button(id);
     },
