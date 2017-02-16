@@ -388,10 +388,10 @@ module Converters::CoughDrop
       buttons << button
     end
     num_buttons = order_flat.length
-    grid_dim = ceil(sqrt(num_buttons))
+    grid_dim = Math.sqrt(num_buttons).ceil
     grid = {'rows': grid_dim,
             'columns': grid_dim,
-            'order': range(0, grid_dim).map do |i|
+            'order': (0 .. grid_dim).map do |i|
               order_flat[i*grid_dim,grid_dim]
             end
     }
