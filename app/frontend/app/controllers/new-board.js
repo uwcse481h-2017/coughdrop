@@ -9,9 +9,15 @@ export default modal.ModalController.extend({
   opening: function(settings) {
     // Create empty board record, and set whether we are creating this board
     // automatically or manually. (Originally set when opening the modal).
+    console.log('WOWOWOWOW'+ this.get('model.user_grid_rows'));
     this.set('model', CoughDrop.store.createRecord('board', {public: false, license: {type: 'private'}, grid: {rows: 2, columns: 4}}));
     this.set('model.createAutomatically', settings.createAutomatically);
-
+    
+    if(this.get('model.user_set_grid_dimension')) {
+      console.log('in setting');
+      this.set('model.grid.rows', this.get('model.user_grid_rows'));
+      this.set('model.grid.columns', this.get('model.user_grid_cols'));
+    }
     if(window.webkitSpeechRecognition) {
       var speech = new window.webkitSpeechRecognition();
       if(speech) {
@@ -278,7 +284,7 @@ export default modal.ModalController.extend({
     },
     hoverOffGrid: function() {
       this.set('previewRows', this.get('model.grid.rows'));
-      this.set('previewColumns', this.get('model.grid.columns'));
+      this.set('previewColumns', this.get('dmodel.grid.columns'));
     },
     setGrid: function(row, col) {
       this.set('model.grid.rows', row);
@@ -288,6 +294,7 @@ export default modal.ModalController.extend({
       this.set('model.image_url', url);
     }
   },
+
   updatePreview: function() {
     this.set('previewRows', this.get('model.grid.rows'));
     this.set('previewColumns', this.get('model.grid.columns'));
