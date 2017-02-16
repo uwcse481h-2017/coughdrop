@@ -361,15 +361,16 @@ module Converters::CoughDrop
     OBF::External.to_png(json, dest_path)
   end
 
+
   def self.from_csv(csv_path, opts)
-    opts['id'] ||= csv_path.split('/').last
+    opts['id'] ||= csv_path.split('/').last.split('.').first
     self.from_csv_text(File.read(csv_path), opts)
   end
 
   def self.from_csv_text(csv_text, opts)
     order_flat = []
     buttons = []
-    csv_text.split('\n').each do |button_csv|
+    csv_text.split(/[\r\n]/).each do |button_csv|
       button_attrs = button_csv.split(',')
       button_attrs.each do |attr|
         attr.strip!
