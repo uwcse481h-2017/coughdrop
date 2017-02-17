@@ -364,40 +364,62 @@ module Converters::CoughDrop
 
   def self.from_csv(csv_path, opts)
     opts['id'] ||= csv_path.split('/').last.split('.').first
+    opts['name'] ||= opts['id']
     self.from_csv_text(File.read(csv_path), opts)
   end
 
   def self.from_csv_text(csv_text, opts)
-    order_flat = []
-    buttons = []
+    order_flat = [] # list of button ids to be used in grid['order']
+    buttons = [] # list of buttons
+
     csv_text.split(/[\r\n]/).each do |button_csv|
       button_attrs = button_csv.split(',')
       button_attrs.each do |attr|
         attr.strip!
       end
+
       button = {}
       button['id'] = button_attrs[0]
       order_flat << button_attrs[0]
 
       button['label'] = button_attrs[1]
 
-      button['vocalization'] = (if button_attrs[2] and button_attrs[2].length > 0
+      button['vocalization'] = (if button_attrs[2] and !button_attrs[2].empty?
                                   button_attrs[2]
                                 else
                                   button_attrs[1]
                                 end)
+
+      bdr = {}
+      bdr.r = button_attrs[3] || 0
+      bdr.g = button_attrs[4] || 0
+      bdr.b = button_attrs[5] || 0
+      button['border_color'] = "rgb(%d,%d,%d)" % [bdr.r, bdr.g, bdr.b]
+
+      bkgr = {}
+      bkgr.r = button_attrs[6] || 255
+      bkgr.g = button_attrs[7] || 255
+      bkgr.b = button_attrs[8] || 255
+      bkgr.a = button_attrs[9] || 1.0
+      button['background_color'] = "rgba(%d,%d,%d,%f)" % [bkgr.r, bkgr.g, bkgr.b, bkgr.a]
+
       buttons << button
     end
     num_buttons = order_flat.length
+
+    # Try to arrange the buttons as compact as possible (a square). This results in an extra row for 2 buttons, but
+    # the main use case for csv import has large numbers of buttons so I'll get around to it later
     grid_dim = Math.sqrt(num_buttons).ceil
     grid = {'rows': grid_dim,
             'columns': grid_dim,
             'order': (0 .. grid_dim).map do |i|
+              # This may leave the last row with fewer than grid_dim elements, but it seems to still work
               order_flat[i*grid_dim,grid_dim]
             end
     }
     board = Converters::Utils.obf_shell
     board['id'] = opts['id']
+    board['name'] = opts['name']
     board['buttons'] = buttons
     board['grid'] = grid
     return self.from_external(board, opts)

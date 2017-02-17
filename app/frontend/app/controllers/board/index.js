@@ -673,21 +673,34 @@ export default Ember.Controller.extend({
   add_next_button_by_label: function(label) {
     editManager.add_button_at_next_empty(label);
   },
-  test_fn2: function(preference) {
-    console.log('here2 ', preference);
+  // Remove button, and if rearrange, remove all empty spaces
+  // TODO determine behavior on add.
+  remove_button_by_preferred_method: function(buttonId) {
+    this.actions.clear_button(buttonId);
+    if(this.get('rearrangeButtons')) {
+      editManager.remove_empty_holes();
+    }
+  },
+  // Sets whether user wants to rearrange buttons on edit or not.
+  // If yes, rearrange to remove empty spots if necessary
+  setRearrangeButtons: function(preference) {
+    this.set('rearrangeButtons', preference); 
+    if (preference) {
+      editManager.remove_empty_holes();
+    }
   },
   // Handles subscriptions to incoming events regarding he board editor slideout
   // through the slideoutService. Currently handles removing a button based on the
   // label indicated to remove in the slideout.
   subscribeToService: Ember.on('init', function() {
-    this.get('slideoutService').on('slideoutRemoveButton', this, this.actions.clear_button);
+    this.get('slideoutService').on('slideoutRemoveButton', this, this.remove_button_by_preferred_method);
     this.get('slideoutService').on('slideoutAddButton', this, this.add_next_button_by_label);
-    this.get('slideoutService').on('setRearrangeButtonsPreference', this, this.test_fn2);
+    this.get('slideoutService').on('setRearrangeButtonsPreference', this, this.setRearrangeButtons);
   }),
   unsubscribeToService: Ember.on('willDestroy', function () {
-    this.get('slideoutService').off('slideoutRemoveButton', this, this.actions.clear_button);
+    this.get('slideoutService').off('slideoutRemoveButton', this, this.remove_button_by_preferred_method);
     this.get('slideoutService').off('slideoutAddButton', this, this.add_next_button_by_label);
-    this.get('slideoutService').off('setRearrangeButtonsPreference', this, this.test_fn2);
+    this.get('slideoutService').off('setRearrangeButtonsPreference', this, this.setRearrangeButtons);
   }),
   actions: {
     boardDetails: function() {
