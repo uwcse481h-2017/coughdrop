@@ -19,6 +19,9 @@ gem 'pg'
 gem 'sass-rails'
 gem 'uglifier', '>= 1.3.0'
 
+# Gem for running Python code needed for auto board creation scripts
+gem 'rubypython', '~> 0.6.3'
+
 gem 'typhoeus'
 gem 'coffee-rails'
 gem 'aws-ses'

@@ -1,3 +1,5 @@
+require 'rubypython'
+
 class Api::BoardsController < ApplicationController
   extend ::NewRelic::Agent::MethodTracer
   before_action :require_api_token, :except => [:index, :user_index, :show, :download, :auto_search_board]
@@ -272,6 +274,19 @@ class Api::BoardsController < ApplicationController
   
   def auto_search_board
     puts "hello world"
+
+    RubyPython.start(:python_exe => 'python2.7')
+    #sys = RubyPython.import 'sys'
+    #puts sys.version # => "2.7.1"
+    abcScript = RubyPython.import 'abcScript'
+    puts abcScript.dumps('RubyPython is awesome!').rubify
+    RubyPython.stop
+    #RubyPython.start # start the Python interpreter
+
+    #abcScript = RubyPython.import('abcScript')
+    #p abcScript.dumps('Testing RubyPython.').rubify
+
+    #RubyPython.stop # stop the Python interpreter
   end
 
   def import
