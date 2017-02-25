@@ -280,7 +280,8 @@ export default modal.ModalController.extend({
       });
     },
     autoGenerateBoard: function(event) {
-           var board = {
+      contentGrabbers.boardGrabber.auto_generate_board();
+      /*     var board = {
         "format": "open-board-0.1",
         "license": {
           "type": "private"
@@ -423,7 +424,7 @@ export default modal.ModalController.extend({
       var file = new File([dictstring], "testBoard", {
           type: "application/obf" // optional - default = ''
       });
-      contentGrabbers.boardGrabber.file_selected(file);
+      contentGrabbers.boardGrabber.file_selected(file);*/
     },
     hoverGrid: function(row, col) {
       this.set('previewRows', row);

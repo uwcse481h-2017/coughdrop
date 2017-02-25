@@ -1830,6 +1830,11 @@ var boardGrabber = Ember.Object.extend({
   cancel_build_board: function() {
     this.controller.set('pending_board', null);
   },
+  auto_generate_board: function() {
+    return persistence.ajax('api/v1/auto_search_board', {
+      type: 'POST'
+    });
+  },
   create_board: function() {
     var board = this.controller.get('pending_board');
     if(board.get('copy_access')) {

@@ -1,6 +1,6 @@
 class Api::BoardsController < ApplicationController
   extend ::NewRelic::Agent::MethodTracer
-  before_action :require_api_token, :except => [:index, :user_index, :show, :download]
+  before_action :require_api_token, :except => [:index, :user_index, :show, :download, :auto_search_board]
 
   def index
     boards = Board
@@ -270,6 +270,10 @@ class Api::BoardsController < ApplicationController
     render json: JsonApi::Progress.as_json(progress, :wrapper => true).to_json
   end
   
+  def auto_search_board
+    puts "hello world"
+  end
+
   def import
     if params['url']
       progress = Progress.schedule(Board, :import, @api_user.global_id, params['url'])
