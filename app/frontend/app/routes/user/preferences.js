@@ -1,4 +1,4 @@
-import Ember from 'ember';
+    import Ember from 'ember';
 import i18n from '../../utils/i18n';
 
 export default Ember.Route.extend({

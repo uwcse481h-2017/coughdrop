@@ -459,35 +459,37 @@
 </div>
 
 
+
+
+
 <!-- grid-Dimension 
 need to add unset default button
 -->
-
-
 <div class="form-group">
-  <label for="set_board_rows" class="col-sm-3 control-label">{{t "Set Grid Rows" key='rows'}}</label>
+  <label for="new_board_rows" class="col-sm-3 control-label">{{t "Set Grid Rows" key='rows'}}</label>
   <div class="col-sm-4">
     <div class="input-group">
       <span class="input-group-btn">
-        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "minus" "model.user_grid_rows"}}>-</button>
+        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "minus" "model.preferences.device.new_board_rows"}}>-</button>
       </span>
-      {{input value=model.user_grid_rows class="form-control" id="set_board_rows" placeholder="not set, enter an number"}}
+      {{input value=model.preferences.device.new_board_rows class="form-control" id="new_board_rows" placeholder="4.0"
+      enter=(action (mut model.preferences.device.new_board_rows))}}
       <span class="input-group-btn">
-        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "plus" "model.user_grid_rows"}}>+</button>
+        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "plus" "model.preferences.device.new_board_rows"}}>+</button>
       </span>
     </div>
   </div>
 </div>
 <div class="form-group">
-  <label for="set_board_cols" class="col-sm-3 control-label">{{t "Set Grid Columns" key='columns'}}</label>
+  <label for="new_board_cols" class="col-sm-3 control-label">{{t "Set Grid Columns" key='columns'}}</label>
   <div class="col-sm-4">
     <div class="input-group">
       <span class="input-group-btn">
-        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "minus" "model.user_grid_cols"}}>-</button>
+        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "minus" "model.preferences.device.new_board_cols"}}>-</button>
       </span>
-      {{input value=model.user_grid_cols class="form-control" id="set_board_cols" placeholder="not set, enter an number"}}
+      {{input value=model.preferences.device.new_board_cols class="form-control" id="new_board_cols" placeholder="4.0"}}
       <span class="input-group-btn">
-        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "plus" "model.user_grid_cols"}}>+</button>
+        <button type="button" class="btn btn-default" {{action "grid_plus_minus" "plus" "model.preferences.device.new_board_cols"}}>+</button>
       </span>
     </div>
   </div>

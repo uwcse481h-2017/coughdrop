@@ -317,6 +317,8 @@ export default Ember.Controller.extend({
 
       var user = this.get('model');
       user.set('preferences.progress.preferences_edited', true);
+      console.log(this.get('model.preferences.device.new_board_rows'));
+      //user.set('preferences.device.new_board_rows', this.get('model.preferences.device.new_board_rows'));
       var _this = this;
       user.save().then(function(user) {
         if(user.get('id') == app_state.get('currentUser.id')) {
