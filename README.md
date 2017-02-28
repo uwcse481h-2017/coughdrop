@@ -97,6 +97,59 @@ can start a single server process and hit it up in your browser at the default a
 (`http://localhost:3000` or whatever you changed it to). You'll be stuck on the
 loading page because the frontend hasn't compiled the frontend javascript yet.
 
+#### Python Backend Setup
+
+For automatic board creation, you will need Python 2.7 and a few libraries. To install these, 
+you should also use a virtual environment to ensure you do not have problems with 
+overlapping Python and Python package installations.
+
+Follow these instructions for installing pip for later installations and virtualenv
+
+<i> pip installation: https://pip.pypa.io/en/stable/installing/</i>
+
+This asks you to run:
+```
+python get-pip.py
+```
+
+<i> virtualenv installation: https://virtualenv.pypa.io/en/stable/installation/</i>
+
+Once these are installed, in the home directory of this repository, run:
+```
+virtualenv coughdrop-python
+```
+
+Next, activate this by running:
+```
+source coughdrop-python/bin/activate
+```
+
+This should now prefix your terminal with `(coughdrop-python) your-info$ `
+
+Ensure Python 2.7.xxx is installed by running:
+```
+python --version
+```
+
+If it is not installed, install Python. You can do this by downloading Python from here:
+
+<i>Python Downloads: https://www.python.org/downloads/release/python-2712/</i>
+
+Next install textacy, by running:
+
+```
+pip install textacy
+```
+
+Next download the latest Wikipedia corpus and put it in the ./data/ folder. You can do this by running the following commands.
+*Note: This may run for around 2 hours*
+```
+cd data
+wget --recursive --no-parent --no-directories --continue https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+```
+
+Once you have completed these steps, your backend setup is complete.
+
 #### Frontend Setup
 
 The frontend is an ember app. I recommend installing ember-cli (https://ember-cli.com/user-guide/)
