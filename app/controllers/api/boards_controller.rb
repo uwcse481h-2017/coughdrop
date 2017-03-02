@@ -275,12 +275,16 @@ class Api::BoardsController < ApplicationController
   def auto_search_board
     # Start Python, and configure system path so that it also includes our
     # top level directory housing our search script.
-    RubyPython.start(:python_exe => 'python2.7')
+    RubyPython.start_from_virtualenv("./coughdrop-python")
     sys = RubyPython.import 'sys'
     os = RubyPython.import 'os'
     sys.path.append(os.path.abspath(os.curdir))
     # Import our script, and run it.
     abcScript = RubyPython.import 'abcScript'
+    abcScript.testFunction()
+    x = abcScript.complicatedTestFunction("hiiiiii")
+    puts 'here'
+    puts x
     # Stop our Python interpreter
     RubyPython.stop
   end
