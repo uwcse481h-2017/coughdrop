@@ -13,7 +13,8 @@ export default modal.ModalController.extend({
     createAutoByTopic: function(event) {
       app_state.set('createBoardMethod', 'auto');
       modal.open('new-board', {createAutomatically: true});
-
+      //modal.open('new-board', {createAutomatically: true, grid_row: this.get('model')});
+      //modal.open('new-board');
 
       // var board = {
       //   "format": "open-board-0.1",

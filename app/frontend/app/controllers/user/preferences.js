@@ -317,7 +317,7 @@ export default Ember.Controller.extend({
 
       var user = this.get('model');
       user.set('preferences.progress.preferences_edited', true);
-      console.log(this.get('model.preferences.device.new_board_rows'));
+      //console.log(this.get('model.preferences.device.new_board_rows'));
       //user.set('preferences.device.new_board_rows', this.get('model.preferences.device.new_board_rows'));
       var _this = this;
       user.save().then(function(user) {
@@ -339,6 +339,13 @@ export default Ember.Controller.extend({
     include_prior_sidebar_buttons: function() {
       this.set('include_prior_sidebar_buttons', true);
     },
+    get_grid_cols: function() {
+      return this.get('model.preferences.device.new_board_cols')
+    },
+
+
+
+
     move_sidebar_button: function(button, direction) {
       var active = this.get('active_sidebar_options');
       var disabled = this.get('disabled_sidebar_options');

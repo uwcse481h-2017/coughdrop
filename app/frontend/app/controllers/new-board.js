@@ -7,13 +7,35 @@ import editManager from '../utils/edit_manager';
 import contentGrabbers from '../utils/content_grabbers';
 
 export default modal.ModalController.extend({
+  // board: Ember.inject.controller('user.preferences'),
+  // needs: ['preferences'],
   opening: function(settings) {
     // Create empty board record, and set whether we are creating this board
     // automatically or manually. (Originally set when opening the modal).
-    console.log('WOWOWOWOW'+ this.get('model.user_grid_rows'));
+    //this.set('model', CoughDrop.store.findRecord('user', 'self'));
+
+    //this.set('model', this.get('model.preferences.device.new_board_rows'));
+    //needs: ['user'];
+    //console.log("printing board row"+this.get('model.preferences.device.new_board_rows'));
+   // console.log("model: " + this.get('model'));
+    //console.log(this.get('model'));
+    //board: Ember.inject.controller('board.index');
+
+   // console.log(this.get('controllers.preferences'));
+   //  console.log(this.get('controllers.preferences.get_grid_cols'));
+   //  console.log(this.get('board'));
+   //  console.log(this.get('board').get('model.preferences.device.button_style'));
+   //  console.log(this.get('board').get('application'));
+
     this.set('model', CoughDrop.store.createRecord('board', {public: false, license: {type: 'private'}, grid: {rows: 2, columns: 4}}));
     this.set('model.createAutomatically', settings.createAutomatically);
     
+    // CoughDrop.store.queryRecord('user', {}).then(function(user) {
+    //   let username = user.get('username');
+    //   console.log(`Currently logged in as ${username}`);
+    // });
+
+
     if(this.get('model.user_set_grid_dimension')) {
       console.log('in setting');
       this.set('model.grid.rows', this.get('model.user_grid_rows'));
