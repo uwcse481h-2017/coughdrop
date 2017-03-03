@@ -10,15 +10,15 @@ export default modal.ModalController.extend({
   opening: function(settings) {
     // Create empty board record, and set whether we are creating this board
     // automatically or manually. (Originally set when opening the modal).
-    console.log('WOWOWOWOW'+ this.get('model.user_grid_rows'));
+    // console.log('WOWOWOWOW'+ this.get('model.user_grid_rows'));
     this.set('model', CoughDrop.store.createRecord('board', {public: false, license: {type: 'private'}, grid: {rows: 2, columns: 4}}));
     this.set('model.createAutomatically', settings.createAutomatically);
     
-    if(this.get('model.user_set_grid_dimension')) {
-      console.log('in setting');
-      this.set('model.grid.rows', this.get('model.user_grid_rows'));
-      this.set('model.grid.columns', this.get('model.user_grid_cols'));
-    }
+    // if(this.get('model.user_set_grid_dimension')) {
+    //   console.log('in setting');
+    //   this.set('model.grid.rows', this.get('model.user_grid_rows'));
+    //   this.set('model.grid.columns', this.get('model.user_grid_cols'));
+    // }
     if(window.webkitSpeechRecognition) {
       var speech = new window.webkitSpeechRecognition();
       if(speech) {
@@ -270,6 +270,8 @@ export default modal.ModalController.extend({
     },
     saveBoard: function(event) {
       var _this = this;
+      console.log("in save board");
+      console.log(this.get('model.grid.labels'));
       if(this.get('model.license')) {
         this.set('model.license.copyright_notice_url', CoughDrop.licenseOptions.license_url(this.get('model.license.type')));
       }
@@ -280,7 +282,16 @@ export default modal.ModalController.extend({
       });
     },
     autoGenerateBoard: function(event) {
-      contentGrabbers.boardGrabber.auto_generate_board();
+      console.log(this.get('model.name'));
+      var _this = this;
+      var response = contentGrabbers.boardGrabber.auto_generate_board(this.get('model.name')).then(function(data){
+        console.log("at auto generate board ")
+        console.log(data);
+        console.log(_this.get('model.grid.labels')); 
+        _this.set('model.grid.labels', data.associations_array.join("\n"));
+        console.log(_this.get('model.grid.labels')); 
+        _this.send('saveBoard');
+      });
       /*     var board = {
         "format": "open-board-0.1",
         "license": {

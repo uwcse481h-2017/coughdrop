@@ -1,4 +1,5 @@
-require 'rubypython'
+#require 'rubypython'
+require 'unirest'
 
 class Api::BoardsController < ApplicationController
   extend ::NewRelic::Agent::MethodTracer
@@ -273,16 +274,30 @@ class Api::BoardsController < ApplicationController
   end
   
   def auto_search_board
-    # Start Python, and configure system path so that it also includes our
-    # top level directory housing our search script.
-    RubyPython.start(:python_exe => 'python2.7')
-    sys = RubyPython.import 'sys'
-    os = RubyPython.import 'os'
-    sys.path.append(os.path.abspath(os.curdir))
-    # Import our script, and run it.
-    abcScript = RubyPython.import 'abcScript'
-    # Stop our Python interpreter
-    RubyPython.stop
+    # # Start Python, and configure system path so that it also includes our
+    # # top level directory housing our search script.
+    # RubyPython.start(:python_exe => 'python2.7')
+    # sys = RubyPython.import 'sys'
+    # os = RubyPython.import 'os'
+    # sys.path.append(os.path.abspath(os.curdir))
+    # # Import our script, and run it.
+    # abcScript = RubyPython.import 'abcScript'
+    # # Stop our Python interpreter
+    # RubyPython.stop
+
+
+    # Code snippets from an open-source library. http://unirest.io/ruby
+    response = Unirest.post "https://twinword-word-associations-v1.p.mashape.com/associations/",
+      headers:{
+        "X-Mashape-Key" => "RgIS4Efs1LmshKEgY3sHRqe1frBVp1Lmg4rjsnwsQLJreJfWFx",
+        "Content-Type" => "application/x-www-form-urlencoded",
+        "Accept" => "application/json"
+      },
+      parameters:{
+        "entry" => params['search_term']
+      }
+      render json: {'response' => response.body}.to_json
+    #response.body
   end
 
   def import

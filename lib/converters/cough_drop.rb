@@ -124,6 +124,9 @@ module Converters::CoughDrop
   def self.from_external(json, opts)
     obj = OBF::Utils.parse_obf(json)
 
+    puts("at start of from_external")
+    
+
     raise "user required" unless opts['user']
     raise "missing id" unless obj['id']
     if obj['ext_coughdrop_settings'] && obj['ext_coughdrop_settings']['protected'] && obj['ext_coughdrop_settings']['key']
@@ -253,6 +256,9 @@ module Converters::CoughDrop
       'key' => board.key
     }
     board
+
+    puts("at end of from_external")
+
   end
   
   def self.to_obz(board, dest_path, opts)

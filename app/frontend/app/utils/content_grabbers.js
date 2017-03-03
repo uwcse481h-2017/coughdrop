@@ -1830,10 +1830,33 @@ var boardGrabber = Ember.Object.extend({
   cancel_build_board: function() {
     this.controller.set('pending_board', null);
   },
-  auto_generate_board: function() {
-    return persistence.ajax('api/v1/auto_search_board', {
-      type: 'POST'
+  auto_generate_board: function(search_term) {
+    // var prep = generate_data_uri.then(function(data) {
+    //   data_uri = data.target.result;
+    //   return persistence.ajax('/api/v1/boards/imports', {
+    //     type: 'POST',
+    //     data: {
+    //       type: type
+    //     }
+    //   });
+    // });
+    var response = persistence.ajax('api/v1/auto_search_board', {
+      type: 'POST',
+      data: {
+        search_term : search_term
+      }
+    }).then(function(data) {
+      console.log(typeof data.response);
+      return data.response;
     });
+    // return persistence.ajax('api/v1/auto_search_board', {
+    //   type: 'POST',
+    //   data: {
+    //     search_term : search_term
+    //   }, 
+
+    // });
+    return response;
   },
   create_board: function() {
     var board = this.controller.get('pending_board');
