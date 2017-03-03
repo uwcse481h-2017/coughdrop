@@ -114,12 +114,8 @@ python get-pip.py
 
 <i> virtualenv installation: https://virtualenv.pypa.io/en/stable/installation/</i>
 
-Once these are installed, in the home directory of this repository, run:
-```
-virtualenv coughdrop-python
-```
-
-Next, activate this by running:
+Once these are installed, in the home directory of this repository, activate the existing
+Python environment:
 ```
 source coughdrop-python/bin/activate
 ```
@@ -135,7 +131,13 @@ If it is not installed, install Python. You can do this by downloading Python fr
 
 <i>Python Downloads: https://www.python.org/downloads/release/python-2712/</i>
 
-Next install textacy, by running:
+Furthermore, the library textacy may be installed. To test if this is the case, run:
+```
+python
+import textacy
+```
+If this throws no errors, textacy is already installed in the virtual environment.
+Otherwisem, install textacy by running:
 
 ```
 pip install textacy
