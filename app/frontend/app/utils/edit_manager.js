@@ -257,35 +257,39 @@ var editManager = Ember.Object.extend({
     }
   },
   // Sorts buttons so that the filled ones are in the front, and empty ones at the
-  // end of a list.
+  // end of the grid list (from left to right, top to bottom).
   remove_empty_holes: function() {
-    // Flatten array.
-    var list = [];
+    // Get existing buttons
     var ob = this.controller.get('ordered_buttons') || [];
+
+    // Flatten array and separate filled from empty buttons
+    var filled_buttons = [];
+    var empty_buttons = [];
     for(var idx = 0; idx < ob.length; idx++) {
       for(var jdx = 0; jdx < ob[idx].length; jdx++) {
         var button = ob[idx][jdx];
-        list.push(button);
-      }
-    }
-    // Selection Sort
-    var i = 0;
-    var j = 0;
-    var n = list.length;
-    // filled < empty, comes first.
-    // Move each button one by one
-    for (j = 0; j < n-1; j++) {
-      // If button is empty, try to swap it.
-      if (this.button_is_empty(list[j])) {
-        // Search for next non-empty button. Swap when find it.
-        for (i = j+1; i < n; i++) {
-          if (!this.button_is_empty(list[i])) {
-              this.switch_buttons(list[j].id, list[i].id);
-              break;
-          }
+        if (this.button_is_empty(button)) {
+          empty_buttons.push(button);
+        } else {
+          filled_buttons.push(button);
         }
       }
     }
+    var reordered_buttons = filled_buttons.concat(empty_buttons);
+
+    // Update board buttons to match the new order.
+    var current_button;
+    var target_button;
+    var target_index = 0;
+    for(var idx = 0; idx < ob.length; idx++) {
+      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
+        ob[idx][jdx] = reordered_buttons[target_index]
+        target_index += 1;
+      }
+    }
+    // Set buttons to reordered buttons, and redraw board if needed.
+    this.controller.set('ordered_buttons', ob);
+    this.controller.redraw_if_needed()
   },
   clear_button: function(id) {
     var opts = {};
