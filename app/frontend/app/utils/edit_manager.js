@@ -44,7 +44,6 @@ var editManager = Ember.Object.extend({
       this.lucky_symbols(this.lucky_symbol.pendingSymbols);
       this.lucky_symbol.pendingSymbols = [];
     }
-
   }.observes('app_state.edit_mode'),
   start_edit_mode: function() {
     var app = app_state.controller;
@@ -283,13 +282,13 @@ var editManager = Ember.Object.extend({
     var target_index = 0;
     for(var idx = 0; idx < ob.length; idx++) {
       for(var jdx = 0; jdx < ob[idx].length; jdx++) {
-        ob[idx][jdx] = reordered_buttons[target_index]
+        ob[idx][jdx] = reordered_buttons[target_index];
         target_index += 1;
       }
     }
     // Set buttons to reordered buttons, and redraw board if needed.
     this.controller.set('ordered_buttons', ob);
-    this.controller.redraw_if_needed()
+    this.controller.redraw_if_needed();
   },
   clear_button: function(id) {
     var opts = {};

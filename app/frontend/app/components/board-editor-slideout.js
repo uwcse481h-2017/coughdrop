@@ -42,12 +42,20 @@ export default Ember.Component.extend(InboundActions, {
   toggleSlideout: function() {
     this.get('slideout').toggle();
   },
+  // Ensure slideout is closed.
+  ensureClosed: function() {
+    if (this.get('slideout').isOpen()) {
+      this.get('slideout').close();
+    }
+  },
   // Handle subscription to the toggle-slideout-service
   subscribeToService: Ember.on('init', function() {
-    this.get('slideoutService').on('toggleSlideout', this,  this.toggleSlideout);
+    this.get('slideoutService').on('toggleSlideout', this, this.toggleSlideout);
+    this.get('slideoutService').on('closeSlideout', this, this.ensureClosed);
   }),
   unsubscribeToService: Ember.on('willDestroyElement', function () {
     this.get('slideoutService').off('toggleSlideout', this, this.toggleSlideout);
+    this.get('slideoutService').off('closeSlideout', this, this.ensureClosed);
   }),
   actions: {
     // When the remove x button is clicked in the slideout, send an event

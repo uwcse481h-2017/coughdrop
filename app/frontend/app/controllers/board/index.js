@@ -17,6 +17,9 @@ var last_redraw = (new Date()).getTime();
 
 export default Ember.Controller.extend({
   slideoutService: Ember.inject.service('slideout-service'),
+  edit_mode_close_slideout: function() {
+    this.get('slideoutService').emitCloseSlideout();
+  }.observes('app_state.edit_mode'),
   title: function() {
     var name = this.get('model.name');
     var title = "Board";

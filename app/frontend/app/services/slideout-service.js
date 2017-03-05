@@ -17,5 +17,8 @@ export default Ember.Service.extend(Ember.Evented, {
   },
   emitNewRearrangePreference: function(preference) {
     this.trigger('setRearrangeButtonsPreference', preference);
+  },
+  emitCloseSlideout: function() {
+    this.trigger('closeSlideout');
   }
 });
