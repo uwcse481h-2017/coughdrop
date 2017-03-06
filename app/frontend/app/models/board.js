@@ -17,6 +17,7 @@ CoughDrop.Board = DS.Model.extend({
   },
   name: DS.attr('string'),
   key: DS.attr('string'),
+  overflow_board_ids: DS.attr(),   // For boards added as overflow from Quick Edit
   description: DS.attr('string'),
   created: DS.attr('date'),
   updated: DS.attr('date'),

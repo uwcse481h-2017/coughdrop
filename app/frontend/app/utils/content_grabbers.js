@@ -1758,6 +1758,7 @@ var boardGrabber = Ember.Object.extend({
     this.controller.set('linkedBoardName', null);
     this.controller.set('pending_board', null);
     this.controller.set('confirm_found_board', null);
+    this.controller.set('button_to_link', null);
   },
   // Handles getting the correct original board for use in build_board and create_board.
   get_original_board: function() {
@@ -1786,7 +1787,7 @@ var boardGrabber = Ember.Object.extend({
     // common usage, like in button-settings. Here, the controller is a button.
     // The button id will be its model's id.
     } else {
-      this.controller.get('model.id');
+      button_id = this.controller.get('model.id');
     }
     return button_id;
   },

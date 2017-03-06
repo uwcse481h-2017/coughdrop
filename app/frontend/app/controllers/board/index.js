@@ -28,11 +28,35 @@ export default Ember.Controller.extend({
     }
     return title;
   }.property('model.name'),
+  overflow_boards: function() {
+    var overflowBoardIds = this.get('model.overflow_board_ids');
+    var overflowBoardModels = null;
+    if (overflowBoardIds) {
+      overflowBoardModels = [];
+      var boardModel;
+      for (var i = 0; i < overflowBoardIds.length; i++) {
+         boardModel = this.store.findRecord('board', overflowBoardIds[i]);
+         overflowBoardModels.push(boardModel);
+      }
+      // TODO remove.
+      console.log('overflow boards, ', overflowBoardModels);
+    }
+    return overflowBoardModels;
+  }.property('model.overflow_board_ids'),
   ordered_buttons: null,
-  processButtons: function() {
-    boundClasses.add_rules(this.get('model.buttons'));
+  // Process buttons for displaying (adding classes).
+  // If alternateBoard is specified, does so for a different board model
+  // than the current board.
+  processButtons: function(alternateBoard) {
+    var boardModel;
+    if (alternateBoard) {
+      boardModel = alternateBoard;
+    } else {
+      boardModel = this.get('model');
+    }
+    boundClasses.add_rules(boardModel.get('buttons'));
     this.computeHeight();
-    if(this.get('model.word_suggestions')) {
+    if(boardModel.get('word_suggestions')) {
       var _this = this;
       _this.set('suggestions', {loading: true});
       word_suggestions.load().then(function() {
@@ -42,7 +66,12 @@ export default Ember.Controller.extend({
         _this.set('suggestions', {error: true});
       });
     }
-    editManager.process_for_displaying();
+    // TODO either create a new method without this, or clean this up better.
+    // also have to process buttons to keep a total list up to date for
+    // the quick edit sidebar.
+    if (!alternateBoard) {
+      editManager.process_for_displaying();
+    }
   }.observes('app_state.board_reload_key'),
   check_for_share_approval: function() {
     var board_id = this.get('model.id');
@@ -88,6 +117,89 @@ export default Ember.Controller.extend({
     });
   }.observes('app_state.button_list', 'app_state.button_list.[]', 'app_state.currentUser'),
   saveButtonChanges: function(decision) {
+    var state = editManager.process_for_saving();
+
+    if(this.get('model.license')) {
+      this.set('model.license.copyright_notice_url', CoughDrop.licenseOptions.license_url(this.get('model.license.type')));
+    }
+
+    this.set('model.buttons', state.buttons);
+    this.set('model.grid', state.grid);
+    boundClasses.setup(true);
+    this.processButtons();
+
+    if(app_state.get('currentBoardState.id') && stashes.get('copy_on_save') == app_state.get('currentBoardState.id')) {
+      app_state.controller.send('tweakBoard');
+      return;
+    }
+
+    // If in the process of editing, we have created some overflow boards, prepare
+    // each of these for saving as well.
+    var overflowBoardStates = null;
+    var overflowBoardModels = null;
+    var numOverflowBoards = 0;
+    var overflowBoardIds = null;
+    if (this.get('overflow_boards')) {
+      overflowBoardStates = editManager.process_overflow_boards_for_saving();
+      overflowBoardModels = this.get('overflow_boards');
+      numOverflowBoards = overflowBoardModels.length;
+      overflowBoardIds = [];
+      var boardState;
+      var boardModel;
+      for (var i = 0; i < numOverflowBoards; i++) {
+        // Set up overflow board model
+        boardState = overflowBoardStates[i];
+        boardModel = overflowBoardModels[i];
+        if(boardModel.get('license')) {
+          boardModel.set('license.copyright_notice_url', CoughDrop.licenseOptions.license_url(boardModel.get('license.type')));
+        }
+        boardModel.set('buttons', boardState.buttons);
+        boardModel.set('grid', boardState.grid);
+        boundClasses.setup(true);
+        this.processButtons(boardModel);
+        // Update Ids list.
+        overflowBoardIds.push(boardModel.get('id'));
+      }
+
+      // Update this boards list of overflow board IDs
+      this.set('model.overflow_board_ids', overflowBoardIds);
+
+      // Copying is not done here for boards created in overflow...
+      // TODO should copying be handled if these already existed?
+    }
+
+    // Get out of edit mode.
+    app_state.toggle_mode('edit');
+
+    // A function to bring up an error modal if the save failed.
+    var reportError = function(err) {
+      console.error(err);
+      modal.error(i18n.t('board_save_failed', "Failed to save board"));
+    };
+
+    // Save current board, and report an error if so.
+    var board = this.get('model');
+    board.save().then(null, reportError);
+
+    // If we have overflow boards to save, save those as well.
+    if (this.get('overflow_boards')) {
+      var overflowBoard;
+      for (var j = 0; j < numOverflowBoards; j++) {
+        overflowBoard = overflowBoardModels[j];
+        overflowBoard.save().then(null, reportError);
+      }
+    }
+
+    // TODO: on commit, only send attributes that have changed
+    // to prevent stepping on other edits if all you're doing is
+    // updating the name, for example. Side note: this is one
+    // of the things that stresses me out about ember-data, changes
+    // made out from underneath without you knowing. It happened
+    // before, but with all the local caching it's more likely to
+    // happen more often.
+  },
+  saveButtonChangesToOverflowBoards: function(boardsToSave) {
+
     var state = editManager.process_for_saving();
 
     if(this.get('model.license')) {

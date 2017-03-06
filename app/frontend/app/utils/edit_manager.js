@@ -18,9 +18,6 @@ var editManager = Ember.Object.extend(linkButton, {
     // Set up rest of edit manager.
     editManager.Button = Button;
     this.controller = board;
-    // Current Board Models holds this board's model, along with any other
-    // overflow boards automatically created.
-    this.current_board_models = [board.get('model')];
     this.set('app_state', app_state);
     if(app_state.controller) {
       app_state.controller.addObserver('dragMode', function() {
@@ -285,15 +282,29 @@ var editManager = Ember.Object.extend(linkButton, {
       // Link the last button on this board to a new overflow board.
       contentGrabbers.boardGrabber.setup(lastButton, this.controller);
       contentGrabbers.boardGrabber.build_board();
-      contentGrabbers.boardGrabber.create_board();
+      contentGrabbers.boardGrabber.create_board(); // TODO make it so you can pass in the current board, not use the pending board.
       // Add new overflow board to models for this board set (current and overflow)
-      var updated_board_models = this.get('current_board_models');
-      updated_board_models.push(this.controller.get('pending_board'));
-      this.set('current_board_models', updated_board_models);
+      var updated_overflow_boards = this.controller.get('overflow_boards');
+      var new_pending_model = this.controller.get('pending_board');
+      var new_pending_buttons = new_pending_model.get('buttons');
+      var index = 0;
+      // TODO finish this to add last button and new button.
+      /*for(var idx = 0; idx < ob.length; idx++) {
+        for(var jdx = 0; jdx < ob[idx].length; jdx++) {
+          ob[idx][jdx] = reordered_buttons[index];
+          index += 1;
+        }
+      }*/
+
+      updated_overflow_boards.push({model: new_pending_model, buttons: new_pending_buttons});
+      //this.set('current_board_models', updated_board_models);
+      this.controller.set('overflow_boards', updated_overflow_boards);
+      console.log('pending board and buttons after processing, ', this.get('pending_overflow_boards')[-1]);
+
+
       // TODO differentiate between current board models that were persisted...and ones that are pending.
       // TODO how to load boards that were overflow when editing again? mark something on the model that says it is
       //        an overflow board?
-      console.log('pending_board after create, ', this.controller.get('pending_board'));
 
       // Alert for now.
       alert('Sorry, you have ran out of room on this board! Please either add more rows and columns, or link to a new board.');
@@ -677,9 +688,32 @@ var editManager = Ember.Object.extend(linkButton, {
       console.log(err);
     });
   },
-  process_for_saving: function() {
-    var orderedButtons = this.controller.get('ordered_buttons');
-    var priorButtons = this.controller.get('model.buttons');
+  process_overflow_boards_for_saving: function() {
+    var overflowBoards = this.controller.get('overflowBoardModels');
+    var i;
+    var currentBoard;
+    var results = [];
+    var individualResult;
+    for (i = 0; i < overflowBoards.length; i++) {
+      currentBoard = overflowBoards[i];
+      individualResult = this.process_for_saving({
+        orderedButtons: currentBoard.buttons,
+        priorButtons: currentBoard.model.get('buttons')
+      });
+      results.push(individualResult);
+    }
+    return results;
+  },
+  process_for_saving: function(options) {
+    var orderedButtons;
+    var priorButtons;
+    if (options) {
+      orderedButtons = options.orderedButtons;
+      priorButtons = options.priorButtons;
+    } else {
+      orderedButtons = this.controller.get('ordered_buttons');
+      priorButtons = this.controller.get('model.buttons');
+    }
     var gridOrder = [];
     var newButtons = [];
     var maxId = 0;
