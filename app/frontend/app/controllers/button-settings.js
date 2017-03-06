@@ -10,8 +10,11 @@ import app_state from '../utils/app_state';
 import boundClasses from '../utils/bound_classes';
 import Button from '../utils/button';
 import Utils from '../utils/misc';
+import linkButton from '../mixins/link-button';
 
-export default modal.ModalController.extend({
+// Extends the linkButton mixin, which currently only holds logic to
+// get supervisees needed when linking a button to another board.
+export default modal.ModalController.extend(linkButton, {
   opening: function() {
     var button = this.get('model.button');
     this.set('board', this.get('model.board'));
@@ -27,25 +30,9 @@ export default modal.ModalController.extend({
     this.set('board_search_type', stashes.get('last_board_search_type') || "personal");
     this.set('image_library', null);
 
-    var supervisees = [];
-    if(app_state.get('sessionUser.supervisees')) {
-      app_state.get('sessionUser.supervisees').forEach(function(supervisee) {
-        supervisees.push({
-          name: supervisee.user_name,
-          image: supervisee.avatar_url,
-          disabled: !supervisee.edit_permission,
-          id: supervisee.id
-        });
-      });
-      if(supervisees.length > 0) {
-        supervisees.unshift({
-          name: i18n.t('me', "me"),
-          id: 'self',
-          image: app_state.get('sessionUser.avatar_url_with_fallback')
-        });
-      }
-    }
-    this.set('supervisees', supervisees);
+    // Get Supervisees info needed to link a button to another board.
+    // Handled in linkButton mixin.
+    this.get_supervisees();
   },
   closing: function() {
     stashes.set('last_board_search_type', this.get('board_search_type'));

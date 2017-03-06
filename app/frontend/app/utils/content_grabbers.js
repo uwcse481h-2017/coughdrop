@@ -1743,6 +1743,12 @@ var soundGrabber = Ember.Object.extend({
 }).create();
 
 var boardGrabber = Ember.Object.extend({
+  // Set up the board grabber. Controller provided may either be that of a modal
+  // or other settings controller like that of button-settings. Or it may be the
+  // board controller itself, if called from edit manager or from the board controller
+  // itself. Board and buttons will need to be found based on which method is calling
+  // boardGrabber using get_original_board and get_button_to_link, below.
+  // Controller must handle setting linkedBoardName at least, correctly.
   setup: function(button, controller) {
     this.controller = controller;
     this.button = button;
@@ -1753,6 +1759,37 @@ var boardGrabber = Ember.Object.extend({
     this.controller.set('pending_board', null);
     this.controller.set('confirm_found_board', null);
   },
+  // Handles getting the correct original board for use in build_board and create_board.
+  get_original_board: function() {
+    var original_board;
+    // If board is available on the scope, we are calling this from
+    // button-settings or a similar modal. Use the board specified here.
+    if (this.controller.get('board')) {
+      original_board = this.controller.get('board');
+    // Otherwise, we are calling this from edit manager or from the board itself.
+    // In this case, the controller itself represents the board, and the original
+    // board is its model.
+    } else {
+      original_board = this.controller.get('model');
+    }
+    return original_board;
+  },
+  // Handles gettign the correct button to which to add a link in pick_board.
+  get_button_to_link: function() {
+    var button_id;
+    // If button_to_link is available on scope, this is called from the edit manager.
+    // Here the controller's model is the board rather than the button.
+    // The button we want to link is in button_to_link.
+    if (this.controller.get('button_to_link.id')) {
+      button_id = this.controller.get('button_to_link.id');
+    // If button_to_link is not set, we are calling this from a modal or other
+    // common usage, like in button-settings. Here, the controller is a button.
+    // The button id will be its model's id.
+    } else {
+      this.controller.get('model.id');
+    }
+    return button_id;
+  },
   find_board: function() {
     var _this = this;
     var search_type = this.controller.get('board_search_type');
@@ -1760,14 +1797,15 @@ var boardGrabber = Ember.Object.extend({
     this.controller.set('confirm_found_board', null);
     var find_args =  {};
     var q = this.controller.get('linkedBoardName');
+    var original_board = this.get_original_board();
     if(search_type == 'personal') {
       find_args = {user_id: 'self', include_shared: true};
     } else if(search_type == 'personal_public') {
       find_args = {user_id: 'self', public: true, include_shared: true};
     } else if(search_type == 'current_user') {
-      find_args = {user_id: this.controller.get('board.user_name'), include_shared: true };
+      find_args = {user_id: original_board.get('user_name'), include_shared: true };
     } else if(search_type == 'current_user_starred') {
-      find_args = {user_id: this.controller.get('board.user_name'), starred: true };
+      find_args = {user_id: original_board.get('user_name'), starred: true };
     } else if(search_type == 'personal_starred') {
       find_args = {user_id: 'self', starred: true};
     } else if(search_type == 'personal_public_starred') {
@@ -1805,7 +1843,7 @@ var boardGrabber = Ember.Object.extend({
       grid: {}
     });
     this.controller.set('confirm_found_board', null);
-    var original_board = this.controller.get('board');
+    var original_board= this.get_original_board();
     if(original_board) {
       board.set('grid.rows', original_board.get('grid.rows') || 2);
       board.set('grid.columns', original_board.get('grid.columns') || 4);
@@ -1833,7 +1871,7 @@ var boardGrabber = Ember.Object.extend({
   create_board: function() {
     var board = this.controller.get('pending_board');
     if(board.get('copy_access')) {
-      var original_board = this.controller.get('board');
+      var original_board = this.get_original_board();
       if(original_board) {
         board.set('license', original_board.get('license'));
         board.set('public', original_board.get('public'));
@@ -1849,7 +1887,8 @@ var boardGrabber = Ember.Object.extend({
     var board = _this.controller.get('confirm_found_board');
     if(!board) { return; }
 
-    var source_board_user_name = _this.controller.get('board.user_name');
+    var source_board = _this.get_original_board();
+    var source_board_user_name = source_board.get('user_name');
     var editable_supervisee_author = (app_state.get('currentUser.supervisees') || []).find(function(s) { return s.edit_permission && s.user_name == source_board_user_name; });
     var new_author = (editable_supervisee_author || {}).user_name || app_state.get('currentUser.user_name');
 
@@ -1872,7 +1911,8 @@ var boardGrabber = Ember.Object.extend({
   },
   pick_board: function(board, force) {
     var _this = this;
-    var source_board_user_name = _this.controller.get('board.user_name');
+    var source_board = _this.get_original_board();
+    var source_board_user_name = source_board.get('user_name');
     var linked_board_user_name = board.get('user_name');
     var current_user_name = app_state.get('currentUser.user_name');
     var editable_supervisee_author = (app_state.get('currentUser.supervisees') || []).find(function(s) { return s.edit_permission && s.user_name == source_board_user_name; });
@@ -1894,13 +1934,15 @@ var boardGrabber = Ember.Object.extend({
       this.controller.set('confirm_found_board', board);
     } else {
       this.controller.set('confirm_found_board', null);
-      editManager.change_button(this.controller.get('model.id'), {
+      // Change the target button to link to this new board.
+      var button_id = _this.get_button_to_link();
+      editManager.change_button(button_id, {
         load_board: {
           id: board.id,
           key: board.get('key')
         }
       });
-      this.clear();
+      _this.clear();
     }
   },
   files_dropped: function(files) {

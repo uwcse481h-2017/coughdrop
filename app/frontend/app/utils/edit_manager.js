@@ -7,11 +7,20 @@ import modal from './modal';
 import persistence from './persistence';
 import progress_tracker from './progress_tracker';
 import i18n from './i18n';
+import contentGrabbers from '../utils/content_grabbers';
+import linkButton from '../mixins/link-button';
 
-var editManager = Ember.Object.extend({
+var editManager = Ember.Object.extend(linkButton, {
   setup: function(board) {
+    // Get supervisees necessary for creating a new board for button links.
+    // Handled in linkButton mixin.
+    this.get_supervisees();
+    // Set up rest of edit manager.
     editManager.Button = Button;
     this.controller = board;
+    // Current Board Models holds this board's model, along with any other
+    // overflow boards automatically created.
+    this.current_board_models = [board.get('model')];
     this.set('app_state', app_state);
     if(app_state.controller) {
       app_state.controller.addObserver('dragMode', function() {
@@ -238,13 +247,19 @@ var editManager = Ember.Object.extend({
   add_button_at_next_empty: function(newLabel) {
     var ob = this.controller.get('ordered_buttons') || [];
     var foundHole = false;
+    var lastButton = null;
     for(var idx = 0; idx < ob.length; idx++) {
       for(var jdx = 0; jdx < ob[idx].length; jdx++) {
         var button = ob[idx][jdx];
-        if(this.button_is_empty(button) && !foundHole) {
+        // If we found a button that is empty, add this new label there and
+        // we are done.
+        if(this.button_is_empty(button)) {
           this.change_button(button.id, {'label': newLabel});
           foundHole = true;
           break;
+        // If this is the last button, store it.
+        } else if (idx == ob.length - 1 && jdx == ob[idx].length - 1) {
+          lastButton = button;
         }
       }
     }
@@ -252,6 +267,35 @@ var editManager = Ember.Object.extend({
     // Should auto create a new board with a link arrow button.
     // Until then, will alert the user that they need to make more room.
     if (!foundHole) {
+      // TODO set whether an alert is shown or auto overflow board is created.
+      var currentBoard = this.controller.get('model');
+      var lastButtonOptions = Object.keys(lastButton);
+      this.controller.set('button_to_link', lastButton);
+
+      // TODO make this work with a chain of boards, not just for creating a second one.
+      // TODO also make this work with undo and redo
+      // TODO don't persist new board until user says save...
+      // could just call create_board late, and save pending boards.
+
+      // If user has set that he/she wants to create overflow boards automatically,
+      // prepare to create a new overflow board.
+      // Set this new overflow board to have the same name with " - Part #" appended to it.
+
+      this.controller.set('linkedBoardName', currentBoard.get('name') + ' - Part ' + this.current_board_models.length + 1);
+      // Link the last button on this board to a new overflow board.
+      contentGrabbers.boardGrabber.setup(lastButton, this.controller);
+      contentGrabbers.boardGrabber.build_board();
+      contentGrabbers.boardGrabber.create_board();
+      // Add new overflow board to models for this board set (current and overflow)
+      var updated_board_models = this.get('current_board_models');
+      updated_board_models.push(this.controller.get('pending_board'));
+      this.set('current_board_models', updated_board_models);
+      // TODO differentiate between current board models that were persisted...and ones that are pending.
+      // TODO how to load boards that were overflow when editing again? mark something on the model that says it is
+      //        an overflow board?
+      console.log('pending_board after create, ', this.controller.get('pending_board'));
+
+      // Alert for now.
       alert('Sorry, you have ran out of room on this board! Please either add more rows and columns, or link to a new board.');
     }
   },
