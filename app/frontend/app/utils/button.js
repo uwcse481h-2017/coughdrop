@@ -350,7 +350,7 @@ var Button = Ember.Object.extend({
     return ret;
   }
 });
-Button.attributes = ['label', 'background_color', 'border_color', 'image_id', 'sound_id', 'load_board', 'hide_label', 'completion'];
+Button.attributes = ['label', 'background_color', 'border_color', 'image_id', 'sound_id', 'load_board', 'hide_label', 'completion', 'overflow_link'];
 
 Button.style = function(style) {
   var res = {};

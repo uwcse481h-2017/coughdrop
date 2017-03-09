@@ -54,6 +54,16 @@ export default Ember.Controller.extend({
   }.property('model.overflow_board_ids'),
   // Maintain a list of all the buttons in this board set (this one and overflow).
   board_set_labeled_buttons: function() {
+    var currentTotalButtons = this.get('total_board_set_buttons');
+    var labeledButtons = currentTotalButtons.filter(function(button) {
+      return !(editManager.button_is_empty(button) || button.overflow_link);
+    });
+    console.log('labeled buttons: ', labeledButtons);
+    return labeledButtons;
+  }.property('total_board_set_buttons'),
+  // Maintains a list of all the buttons in this board set, regardless of whether
+  // they are empty or link buttons for overflow pagination or not.
+  total_board_set_buttons: function() {
     var allButtons = null;
     var ob = this.get('ordered_buttons');
     if (!ob) {
@@ -61,21 +71,16 @@ export default Ember.Controller.extend({
     }
 
     allButtons = [];
-    // First, loop over all ordered buttons for this board. Only include those
-    // that are not empty. If there is a link to another overflow board,
-    // do not include that button either.
+    // First, loop over all ordered buttons for this board and add these.
     var button;
     for(var idx = 0; idx < ob.length; idx++) {
       for(var jdx = 0; jdx < ob[idx].length; jdx++) {
-        button = ob[idx][jdx];
-        if (!editManager.button_is_empty(button) && !button.get('overflow_link')) {
-          allButtons.push(button);
-        }
+        allButtons.push(ob[idx][jdx]);
       }
     }
 
     // If we have an overflow board or boards, add its or their buttons to the
-    // list as well, omitting empties and link buttons between boards.
+    // list as well.
     // TODO ensure this is temporarily stored on this model.
     var overflowBoards = this.get('pending_overflow_boards');
     if (overflowBoards) {
@@ -85,15 +90,7 @@ export default Ember.Controller.extend({
       for (i = 0; i < overflowBoards.length; i++) {
         board = overflowBoards[i];
         buttons = board.get('buttons');
-        // All overflow boards necessarily point back to the previous board,
-        // so we do not have to check button 1.
-        var j;
-        for (j = 1; j < buttons.length; j++) {
-          button = buttons[j];
-          if (!editManager.button_is_empty(button) && !button.overflow_link) {
-            allButtons.push(button);
-          }
-        }
+        allButtons = allButtons.concat(buttons);
       }
     }
     return allButtons;
