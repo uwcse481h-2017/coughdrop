@@ -15,19 +15,15 @@
       {{/if}}
     </label>
   </div>
-  {{#each buttons as |row|}}
-    {{#each row as |button|}}
-      {{#unless button.empty}}
-        <div>
-          <label style="font-weight: normal;">
-            <span role=button class="remove-button" aria-label="Remove Word" onclick={{action "removeButton" button}}>
-              <span class="glyphicon glyphicon-minus-sign" aria-hidden="true"></span>
-            </span>
-            {{button.label}}
-          </label>
-        </div>
-      {{/unless}}
-    {{/each}}
+  {{#each buttons as |button|}}
+    <div>
+      <label style="font-weight: normal;">
+        <span role=button class="remove-button" aria-label="Remove Word" onclick={{action "removeButton" button}}>
+          <span class="glyphicon glyphicon-minus-sign" aria-hidden="true"></span>
+        </span>
+        {{button.label}}
+      </label>
+    </div>
   {{/each}}
   <div>
     <span aria-label="Add Word">

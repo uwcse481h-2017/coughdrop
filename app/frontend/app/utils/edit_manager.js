@@ -237,19 +237,50 @@ var editManager = Ember.Object.extend(linkButton, {
         }
       }
     }
+    // If there are overflow boards, search their buttons as well.
+    if (this.controller.get('overflow_boards')) {
+      var i;
+      var overflowBoards = this.controller.get('overflow_boards');
+      var board;
+      var buttons;
+      for (i = 0; i < overflowBoards.length; i++) {
+        board = overflowBoards[i];
+        buttons = board.get('buttons');
+      }
+    }
     return null;
   },
   // Sets the first empty button found in the list (left to right,
   // top to bottom) to have the given label.
+
+  // TODO make this work with a chain of boards, not just for creating a second one.
+  // TODO also make this work with undo and redo
+  // TODO don't persist new board until user says save...
+  // could just call create_board late, and save pending boards.
+  // TODO set whether an alert is shown or auto overflow board is created.
+  // TODO: check if existing boards it is null, or if there are no empty spots in overflow boards, before
+    // adding a new one. allows for chaining.
+  // TODO: see if we can delay the creation of a new overflow board until user hits save.
+  // TODO laod existing overflow-buttons
+  // TODO make content grabbers accept a model rather than use the pending board on
+  // scope. == wait may not need this...rethink.
+  // TODO differentiate between current board models that were persisted...and ones that are pending.
+  // TODO how to load boards that were overflow when editing again? mark something on the model that says it is
+  //        an overflow board?
   add_button_at_next_empty: function(newLabel) {
     var ob = this.controller.get('ordered_buttons') || [];
     var foundHole = false;
     var lastButton = null;
-    for(var idx = 0; idx < ob.length; idx++) {
-      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
+    // As long as we have not found a hole (empty button) on the displayed board,
+    // continue searching. Add the new label once found.
+    var idx = 0;
+    var jdx = 0;
+    var maxID = -100;
+    while (!foundHole && (idx < ob.length)) {
+      // Check each row for an empty button. Stop searching if we find it,
+      // and add new label.
+      for(jdx = 0; jdx < ob[idx].length; jdx++) {
         var button = ob[idx][jdx];
-        // If we found a button that is empty, add this new label there and
-        // we are done.
         if(this.button_is_empty(button)) {
           this.change_button(button.id, {'label': newLabel});
           foundHole = true;
@@ -258,60 +289,95 @@ var editManager = Ember.Object.extend(linkButton, {
         } else if (idx == ob.length - 1 && jdx == ob[idx].length - 1) {
           lastButton = button;
         }
+        if (button.id > maxID) {
+          maxID = button.id;
+        }
       }
+      idx++;
     }
-    // TODO handle case where there are no more empty buttons on the board.
-    // Should auto create a new board with a link arrow button.
-    // Until then, will alert the user that they need to make more room.
+
+    // Here we have not found an open space on this board. Therefore, either
+    // generate a new overflow board and auto link to it, or open a modal
+    // asking the user what they would like to do.
+
+    // Currently just does an overflow, and overwrites whatever current overflow there was
+    // and creates a new board every time.
     if (!foundHole) {
-      // TODO set whether an alert is shown or auto overflow board is created.
       var currentBoard = this.controller.get('model');
-      var lastButtonOptions = Object.keys(lastButton);
       this.controller.set('button_to_link', lastButton);
 
-      // TODO make this work with a chain of boards, not just for creating a second one.
-      // TODO also make this work with undo and redo
-      // TODO don't persist new board until user says save...
-      // could just call create_board late, and save pending boards.
+      // New buttons will have ids greater than the max on the original board.
+      var nextButtonId = maxID + 1;
+       // Create a copy of the last button to move to the next board before it is updated.
+      var buttonToMove = editManager.Button.create(lastButton.raw());
+      buttonToMove.set('id', nextButtonId);
+      buttonToMove.set('load_board', null);
+      nextButtonId++;
+
 
       // If user has set that he/she wants to create overflow boards automatically,
       // prepare to create a new overflow board.
-      // Set this new overflow board to have the same name with " - Part #" appended to it.
+      var existingOverflowBoards = this.controller.get('overflow_boards') ? 
+                                    this.controller.get('overflow_boards') : [];
+      var numBoards = existingOverflowBoards + 2; // add in first board, and new one to count.
 
-      this.controller.set('linkedBoardName', currentBoard.get('name') + ' - Part ' + this.current_board_models.length + 1);
-      // Link the last button on this board to a new overflow board.
+      // Set this new overflow board to have the same name with " - Part #" appended to it.
+      this.controller.set('linkedBoardName', currentBoard.get('name') + ' - Part ' + numBoards);
+
+      // Link the last button on this board to a new overflow board, which we start building.
+      // Currently creates the board and persists it immediately. This is current behavior
+      // with linking, where boards remain after edit creation even if the user hits cancel.
+      // Store this new partially built board, and create it.
       contentGrabbers.boardGrabber.setup(lastButton, this.controller);
       contentGrabbers.boardGrabber.build_board();
-      contentGrabbers.boardGrabber.create_board(); // TODO make it so you can pass in the current board, not use the pending board.
-      // Add new overflow board to models for this board set (current and overflow)
-      var updated_overflow_boards = this.controller.get('overflow_boards');
-      var new_pending_model = this.controller.get('pending_board');
-      var new_pending_buttons = new_pending_model.get('buttons');
-      var index = 0;
-      // TODO finish this to add last button and new button.
-      /*for(var idx = 0; idx < ob.length; idx++) {
-        for(var jdx = 0; jdx < ob[idx].length; jdx++) {
-          ob[idx][jdx] = reordered_buttons[index];
-          index += 1;
-        }
-      }*/
+      var newPendingModel = this.controller.get('pending_board');
+      contentGrabbers.boardGrabber.create_board();
 
-      updated_overflow_boards.push({model: new_pending_model, buttons: new_pending_buttons});
-      //this.set('current_board_models', updated_board_models);
-      this.controller.set('overflow_boards', updated_overflow_boards);
-      console.log('pending board and buttons after processing, ', this.get('pending_overflow_boards')[-1]);
+      // Update the pagination button on the first board.
+      // Get the updated buttons for that board first before updating again.
+      ob = this.controller.get('ordered_buttons');
+      var lastRow = ob.length - 1;
+      var lastColumn = ob[lastRow].length - 1;
+      var pageForwardButton = ob[lastRow][lastColumn];
+      this.change_button(pageForwardButton.id, {'label': 'right arrow', 'overflow_link': true});
 
+      // Add relevant buttons to this new overflow board.
+      // First add the link button back to this board.
+      var backButton = editManager.Button.create({
+        empty: false,
+        label: 'left arrow', // TODO have this just be an arrow, not back.
+        id: nextButtonId,
+        load_board: {key: currentBoard.get('key')},
+        overflow_link: true
+      });
+      newPendingModel.add_button(backButton);
+      nextButtonId++;
 
-      // TODO differentiate between current board models that were persisted...and ones that are pending.
-      // TODO how to load boards that were overflow when editing again? mark something on the model that says it is
-      //        an overflow board?
+      // Add a deep copy of the last button but with a new new id from this
+      // board to the second position on next board.
+      newPendingModel.add_button(buttonToMove);
 
-      // Alert for now.
+      // Add the new button as the 3rd button on the next page.
+      var newButton = editManager.Button.create({
+        empty: false,
+        label: newLabel,
+        id: nextButtonId
+      });
+      newPendingModel.add_button(newButton);
+      nextButtonId += 1;
+
+      // Update list of overflow boards to include this new board at the end.
+      var updatedOverflowBoards = existingOverflowBoards;
+      updatedOverflowBoards.push(newPendingModel);
+      this.controller.set('pending_overflow_boards', updatedOverflowBoards);
+
+      // Alert for now. TODO have a setting that differentiates between these.
       alert('Sorry, you have ran out of room on this board! Please either add more rows and columns, or link to a new board.');
     }
   },
   // Sorts buttons so that the filled ones are in the front, and empty ones at the
   // end of the grid list (from left to right, top to bottom).
+  // TODO: update this to ignore paging buttons, to delete boards when necessary, etc.
   remove_empty_holes: function() {
     // Get existing buttons
     var ob = this.controller.get('ordered_buttons') || [];

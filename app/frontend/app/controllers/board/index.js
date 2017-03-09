@@ -20,6 +20,14 @@ export default Ember.Controller.extend({
   edit_mode_close_slideout: function() {
     this.get('slideoutService').emitCloseSlideout();
   }.observes('app_state.edit_mode'),
+  edit_mode_setup_overflow_board_data: function() {
+    // If also entering edit_mode, copy existing overflow boards
+    // over to a set we will update during this edit session.
+    var existingOverflowBoards = this.get('existing_overflow_boards');
+    if (existingOverflowBoards && app_state.get('edit_mode')) {
+      this.set('pending_overflow_boards', existingOverflowBoards);
+    }
+  }.observes('app_state.edit_mode'),
   title: function() {
     var name = this.get('model.name');
     var title = "Board";
@@ -28,7 +36,10 @@ export default Ember.Controller.extend({
     }
     return title;
   }.property('model.name'),
-  overflow_boards: function() {
+  // Need to initialize overflow_boards at beginning, then be able to add on them,
+  // and persist back... but then also need to be able to keep pending changes.
+  // What happens if someone else edits this at the same time?
+  existing_overflow_boards: function() {
     var overflowBoardIds = this.get('model.overflow_board_ids');
     var overflowBoardModels = null;
     if (overflowBoardIds) {
@@ -38,12 +49,57 @@ export default Ember.Controller.extend({
          boardModel = this.store.findRecord('board', overflowBoardIds[i]);
          overflowBoardModels.push(boardModel);
       }
-      // TODO remove.
-      console.log('overflow boards, ', overflowBoardModels);
     }
     return overflowBoardModels;
   }.property('model.overflow_board_ids'),
+  // Maintain a list of all the buttons in this board set (this one and overflow).
+  board_set_labeled_buttons: function() {
+    var allButtons = null;
+    var ob = this.get('ordered_buttons');
+    if (!ob) {
+      return null;
+    }
+
+    allButtons = [];
+    // First, loop over all ordered buttons for this board. Only include those
+    // that are not empty. If there is a link to another overflow board,
+    // do not include that button either.
+    var button;
+    for(var idx = 0; idx < ob.length; idx++) {
+      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
+        button = ob[idx][jdx];
+        if (!editManager.button_is_empty(button) && !button.get('overflow_link')) {
+          allButtons.push(button);
+        }
+      }
+    }
+
+    // If we have an overflow board or boards, add its or their buttons to the
+    // list as well, omitting empties and link buttons between boards.
+    // TODO ensure this is temporarily stored on this model.
+    var overflowBoards = this.get('pending_overflow_boards');
+    if (overflowBoards) {
+      var i;
+      var board;
+      var buttons;
+      for (i = 0; i < overflowBoards.length; i++) {
+        board = overflowBoards[i];
+        buttons = board.get('buttons');
+        // All overflow boards necessarily point back to the previous board,
+        // so we do not have to check button 1.
+        var j;
+        for (j = 1; j < buttons.length; j++) {
+          button = buttons[j];
+          if (!editManager.button_is_empty(button) && !button.overflow_link) {
+            allButtons.push(button);
+          }
+        }
+      }
+    }
+    return allButtons;
+  }.property('ordered_buttons', 'pending_overflow_boards'),
   ordered_buttons: null,
+  pending_overflow_boards: null,
   // Process buttons for displaying (adding classes).
   // If alternateBoard is specified, does so for a different board model
   // than the current board.
