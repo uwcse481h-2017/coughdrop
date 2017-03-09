@@ -228,24 +228,13 @@ var editManager = Ember.Object.extend(linkButton, {
     if(newState.length === 0) { newState.push(fakeRow); }
     this.controller.set('ordered_buttons', newState);
   },
+  // Find a button in this board set (includes current board and all overflow
+  // boards), using the id. If not found, returns null.
   find_button: function(id) {
-    var ob = this.controller.get('ordered_buttons') || [];
-    for(var idx = 0; idx < ob.length; idx++) {
-      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
-        if(id && ob[idx][jdx].id == id) {
-          return ob[idx][jdx];
-        }
-      }
-    }
-    // If there are overflow boards, search their buttons as well.
-    if (this.controller.get('overflow_boards')) {
-      var i;
-      var overflowBoards = this.controller.get('overflow_boards');
-      var board;
-      var buttons;
-      for (i = 0; i < overflowBoards.length; i++) {
-        board = overflowBoards[i];
-        buttons = board.get('buttons');
+    var totalButtons = this.controller.get('total_board_set_buttons') || [];
+    for (var i = 0; i < totalButtons.length; i++) {
+      if(id && totalButtons[i].id == id) {
+        return totalButtons[i];
       }
     }
     return null;

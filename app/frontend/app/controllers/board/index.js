@@ -58,7 +58,6 @@ export default Ember.Controller.extend({
     var labeledButtons = currentTotalButtons.filter(function(button) {
       return !(editManager.button_is_empty(button) || button.overflow_link);
     });
-    console.log('labeled buttons: ', labeledButtons);
     return labeledButtons;
   }.property('total_board_set_buttons'),
   // Maintains a list of all the buttons in this board set, regardless of whether
