@@ -270,6 +270,7 @@ var editManager = Ember.Object.extend(linkButton, {
       // and add new label.
       for(jdx = 0; jdx < ob[idx].length; jdx++) {
         var button = ob[idx][jdx];
+        console.log('button in add button check: ', button);
         if(this.button_is_empty(button)) {
           this.change_button(button.id, {'label': newLabel});
           foundHole = true;
@@ -300,9 +301,10 @@ var editManager = Ember.Object.extend(linkButton, {
        // Create a copy of the last button to move to the next board before it is updated.
       var buttonToMove = editManager.Button.create(lastButton.raw());
       buttonToMove.set('id', nextButtonId);
-      buttonToMove.set('load_board', null);
       nextButtonId++;
-
+      // TODO may need these:
+      //buttonToMove.set('buttonAction', 'talk');
+      //buttonToMove.set('load_board', null);
 
       // If user has set that he/she wants to create overflow boards automatically,
       // prepare to create a new overflow board.
@@ -366,37 +368,78 @@ var editManager = Ember.Object.extend(linkButton, {
   },
   // Sorts buttons so that the filled ones are in the front, and empty ones at the
   // end of the grid list (from left to right, top to bottom).
-  // TODO: update this to ignore paging buttons, to delete boards when necessary, etc.
+  // If there are overflow boareds, also considers these. In the case of overflow,
+  // does not move the paging buttons (arrows to navigate between pages).
   remove_empty_holes: function() {
-    // Get existing buttons
-    var ob = this.controller.get('ordered_buttons') || [];
+    // Get existing total list of buttons
+    var _this = this;
+    var ob = this.controller.get('ordered_buttons');
+    var totalButtons = this.controller.get('total_board_set_buttons') || [];
 
-    // Flatten array and separate filled from empty buttons
-    var filled_buttons = [];
-    var empty_buttons = [];
-    for(var idx = 0; idx < ob.length; idx++) {
-      for(var jdx = 0; jdx < ob[idx].length; jdx++) {
-        var button = ob[idx][jdx];
-        if (this.button_is_empty(button)) {
-          empty_buttons.push(button);
-        } else {
-          filled_buttons.push(button);
+    // Divide array into filled and empty buttons, and paging buttons in order.
+    var filledButtons = [];
+    var emptyButtons = [];
+    var paginationButtons = [];
+    var paginationButtonIndices = [];
+    console.log('there is a bug in remove empty holes. deleting buttons from the main display, then adding one, throws errors');
+    console.log('total buttons: ', totalButtons);
+    totalButtons.forEach(function(button, index) {
+      console.log('button: ', button);
+      console.log('index: ', index);
+      // Button is filled.
+      if (!_this.button_is_empty(button)) {
+        filledButtons.push(button);
+      // Button is a paging button.
+      } else if (button.overflow_link) {
+        paginationButtons.push(button);
+        paginationButtonIndices.push(index);
+      // Button is empty.
+      } else {
+        emptyButtons.push(button);
+      }
+    });
+
+
+    // TODO need to determine if need to delete buttons on board.
+    var reorderedButtons = [];
+    var currentIndex = 0;
+    var pagingButton = null;
+    var button;
+    var numButtons = filledButtons.length + paginationButtons.length + emptyButtons.length;
+    var numDisplayButtons = ob.length * ob[0].length;
+    console.log('num display: ', numDisplayButtons);
+    while (currentIndex < numButtons) {
+      // If we are at the point where there used to be a pagination button, and
+      // we still have more filled buttons to add to an overflow board, put in the
+      // next saved pagination button and remove it from the list.
+      if (paginationButtonIndices.includes(currentIndex) && filledButtons.length > 0) {
+        reorderedButtons.push(paginationButtons.shift());
+      // Otherwise add filled buttons first, empties second. Empties should only
+      // be added back if they will be on the displayed section of the screen.
+      } else {
+        if (filledButtons.length > 0) {
+          reorderedButtons.push(filledButtons.shift());
+        } else if (currentIndex < numDisplayButtons && emptyButtons.length > 0) {
+          reorderedButtons.push(emptyButtons.shift());
+        } else if (currentIndex < numDisplayButtons) { // And there are no more empty buttons
+          reorderedButtons.push(this.fake_button());
         }
       }
+      currentIndex++;
     }
-    var reordered_buttons = filled_buttons.concat(empty_buttons);
 
-    // Update board buttons to match the new order.
-    var current_button;
-    var target_button;
-    var target_index = 0;
+    // Update board displayed buttons to match the new order.
+    // This takes the first chunk of buttons from the reordered buttons that
+    // are visible on the board.
+    var targetIndex = 0;
     for(var idx = 0; idx < ob.length; idx++) {
       for(var jdx = 0; jdx < ob[idx].length; jdx++) {
-        ob[idx][jdx] = reordered_buttons[target_index];
-        target_index += 1;
+        ob[idx][jdx] = reorderedButtons[targetIndex];
+        targetIndex++;
       }
     }
     // Set buttons to reordered buttons, and redraw board if needed.
+    this.controller.set('total_board_set_buttons', reorderedButtons);
     this.controller.set('ordered_buttons', ob);
     this.controller.redraw_if_needed();
   },
