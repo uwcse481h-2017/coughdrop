@@ -25,6 +25,7 @@ class ButtonImage < ActiveRecord::Base
     self.settings['license'] ||= {
       'type' => 'private'
     }
+    self.settings['content_type'] ||= 'application/json'
     self.public ||= false
     true
   end
@@ -77,7 +78,7 @@ class ButtonImage < ActiveRecord::Base
     raise "user required as image author" unless self.user_id || non_user_params[:user]
     self.user ||= non_user_params[:user] if non_user_params[:user]
     self.settings ||= {}
-    process_url(params['url'], non_user_params) if params['url']
+    self.url = process_url(params['url'], non_user_params) if params['url']
     self.settings['content_type'] = params['content_type'] if params['content_type']
     self.settings['width'] = params['width'].to_i if params['width']
     self.settings['height'] = params['height'].to_i if params['height']
